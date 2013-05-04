@@ -41,7 +41,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, dispTime, domain, fetch, getDomain, getLastFetch, getToken, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, schema, setInfo, startWorkLog, stopWorkLog, sync, token, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, domain, fetch, getDomain, getLastFetch, getToken, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, schema, setInfo, startWorkLog, stopWorkLog, sync, token, turnback, working_log, zero;
 
   working_log = null;
 
@@ -83,9 +83,11 @@
     info = db.one("infos", {
       key: "token"
     });
-    if (!info || info.val.length < 10) {
-      val = prompt('please input your API token', '');
+    if (location.hash && location.hash.length > 10) {
+      val = location.hash.replace(/#/, "");
       info = setInfo("token", val);
+    } else if (!info || info.val.length < 10) {
+      location.href = "" + domain + "/token?url=" + location.href;
     }
     return info.val;
   };
@@ -108,70 +110,117 @@
   };
 
   fetch = function() {
-    var diffs, i, issues, p, params, project, projects, url, w, work_logs, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+    var diffs, has_issue, issue, issues, params, project, projects, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
 
     projects = [];
     issues = [];
     work_logs = [];
-    _ref = db.find("projects");
+    _ref = db.find("projects", {
+      server_id: null
+    });
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      p = _ref[_i];
-      project = db.one("issues", {
-        project_id: p.id
+      project = _ref[_i];
+      has_issue = db.one("issues", {
+        project_id: project.id
       });
-      if (project && !project.server_id) {
-        projects.push(p);
+      if (has_issue) {
+        project.local_id = project.id;
+        delete project.id;
+        projects.push(project);
       }
     }
-    _ref1 = db.find("issues");
+    _ref1 = db.find("issues", {
+      server_id: null
+    });
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      i = _ref1[_j];
-      if (!i.server_id) {
-        issues.push(i);
+      issue = _ref1[_j];
+      project = db.one("projects", {
+        id: issue.project_id
+      });
+      if (project.server_id) {
+        issue.project_server_id = project.server_id;
       }
+      issue.local_id = issue.id;
+      delete issue.id;
+      issues.push(issue);
     }
-    _ref2 = db.find("work_logs");
+    _ref2 = db.find("work_logs", {
+      server_id: null
+    });
     for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-      w = _ref2[_k];
-      if (!w.server_id) {
-        work_logs.push(w);
+      work_log = _ref2[_k];
+      issue = db.one("issues", {
+        id: work_log.issue_id
+      });
+      if (issue.server_id) {
+        work_log.issue_server_id = issue.server_id;
       }
+      work_log.local_id = work_log.id;
+      delete work_log.id;
+      work_logs.push(work_log);
     }
     diffs = {
       projects: projects,
       issues: issues,
       work_logs: work_logs
     };
+    working_logs = [];
+    wlsis = db.one("infos", {
+      key: "working_log_server_ids"
+    });
+    if (wlsis) {
+      console.log(wlsis);
+      _ref3 = wlsis.val.split(",");
+      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+        working_log_server_id = _ref3[_l];
+        working_logs.push(db.one("work_logs", {
+          server_id: parseInt(working_log_server_id)
+        }));
+      }
+    }
     params = {
       token: token,
       last_fetch: last_fetch,
-      diffs: diffs
+      diffs: diffs,
+      working_logs: working_logs
     };
-    console.log("fetch at " + (now()));
+    debug("diffs", diffs);
+    debug("fetch at", now());
     url = "" + domain + "/api/v1/diffs.json";
     return $.post(url, params, function(data) {
+      debug("fetch callback", data);
+      wlsis = db.one("infos", {
+        key: "working_log_server_ids"
+      });
+      if (!wlsis) {
+        wlsis = db.ins("infos", {
+          key: "working_log_server_ids"
+        });
+      }
+      wlsis.val = data.working_log_server_ids.join(",");
+      db.upd("infos", wlsis);
       sync("server_ids", data.server_ids);
       sync("projects", data.projects);
       sync("issues", data.issues);
       sync("work_logs", data.work_logs);
-      last_fetch = parseInt(new Date().getTime());
+      last_fetch = now();
       return setInfo("last_fetch", last_fetch);
     });
   };
 
   sync = function(table_name, data) {
-    var i, issue, item, local_id, local_ids, server_id, _i, _len, _results;
+    var i, issue, item, local_id, server_id, server_ids, _i, _len, _results;
 
     if (table_name === "server_ids") {
       _results = [];
       for (table_name in data) {
-        local_ids = data[table_name];
+        server_ids = data[table_name];
         _results.push((function() {
           var _results1;
 
           _results1 = [];
-          for (local_id in local_ids) {
-            server_id = local_ids[local_id];
+          for (local_id in server_ids) {
+            server_id = server_ids[local_id];
             item = db.one(table_name, {
               id: local_id
             });
@@ -212,7 +261,7 @@
           item = db.ins(table_name, i);
         }
       }
-      return console.log("sync is done");
+      return debug("sync is done", data);
     }
   };
 
@@ -256,7 +305,7 @@
   };
 
   renderProject = function(project) {
-    return $("#projects-tab").append("<div id=\"project_" + project.id + "\" class=\"project\">\n  <h1>" + project.name + "</h1>\n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" />\n  <div class=\"issues\"></div>\n</div>");
+    return $("#projects-tab").append("<div id=\"project_" + project.id + "\" class=\"project\">\n  <h1>" + project.name + (project.server_id ? "" : "(サーバ待機中)") + "</h1>\n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" />\n  <div class=\"issues\"></div>\n</div>");
   };
 
   renderIssues = function(issues) {
@@ -284,11 +333,7 @@
         var $e;
 
         $e = $(this).parent().find(".body");
-        if ($e.css("display") === "none") {
-          $e.css("display", "block");
-        } else {
-          $e.css("display", "none");
-        }
+        turnback($e);
         return false;
       });
       $(".card").click(function() {
@@ -312,12 +357,13 @@
     var $project, title;
 
     $project = $("#project_" + issue.project_id);
-    $project.css("display", "block");
+    $project.fadeIn(200);
     title = "" + issue.title + " " + issue.is_ddt;
     if (issue.body && issue.body.length > 0) {
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
-    return $project.append("<div id=\"issue_" + issue.id + "\" class=\"issue\">\n  " + title + " \n  <a class=\"card\" href=\"#\"></a>\n  <a class=\"ddt\" href=\"#\">DDT</a>\n  <div class=\"body\">" + issue.body + "</div>\n</div>");
+    $project.append("<div id=\"issue_" + issue.id + "\" class=\"issue\">\n  " + title + " \n  " + (issue.server_id ? "" : "(サーバ待機中)") + "\n  <a class=\"card\" href=\"#\"></a>\n  <a class=\"ddt\" href=\"#\">DDT</a>\n  <div class=\"body\">" + issue.body + "</div>\n</div>");
+    return $("issue_" + issue.id).hide().fadeIn(200);
   };
 
   renderDdt = function(issue_id) {
@@ -328,7 +374,7 @@
     });
     issue.is_ddt = true;
     db.upd("issues", issue);
-    return $("#issue_" + issue.id).css("display", "none");
+    return $("#issue_" + issue.id).fadeOut(200);
   };
 
   renderCards = function(issue_id) {
@@ -355,7 +401,6 @@
   };
 
   stopWorkLog = function() {
-    console.log(work_log);
     working_log.end_at = now();
     db.upd("work_logs", working_log);
     return $("#issue_" + working_log.issue_id + " .card").html("start");
@@ -365,11 +410,12 @@
     if (issue_id == null) {
       issue_id = null;
     }
+    debug("startWorkLog", issue_id);
     if (issue_id) {
       working_log = db.ins("work_logs", {
         issue_id: issue_id
       });
-      working_log.started_at = working_log.ins_at;
+      working_log.started_at = now();
       db.upd("work_logs", working_log);
       return $("#issue_" + issue_id + " .card").html("stop");
     }
@@ -395,7 +441,7 @@
       name: name
     });
     renderProjects();
-    return $("#project_" + project.id).css("display", "block");
+    return $("#project_" + project.id).fadeIn(200);
   };
 
   renderWorkLogs = function() {
@@ -403,7 +449,12 @@
 
     $("#work_logs").html("");
     title = "crowdsourciing";
-    _ref = db.find("work_logs");
+    _ref = db.find("work_logs", null, {
+      order: {
+        started_at: "desc"
+      },
+      limit: 20
+    });
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       work_log = _ref[_i];
       if (!work_log.issue_id) {
@@ -418,15 +469,17 @@
           return db.upd("work_logs", work_log);
         });
       }
-      console.log(work_log);
       issue = db.one("issues", {
         id: work_log.issue_id
       });
+      if (!issue.title) {
+        console.log(issue);
+      }
       stop = "";
       if (!work_log.end_at) {
         stop = "<a href=\"#\" class=\"cardw\">STOP</a>";
       }
-      $("#work_logs").prepend("<div>" + issue.title + " " + (dispTime(work_log)) + "</div>" + stop);
+      $("#work_logs").append("<div>" + issue.title + " " + (dispTime(work_log)) + "\n" + (work_log.server_id ? "" : "(サーバ待機中)"));
       $(".cardw").click(function() {
         var issue_id;
 
@@ -459,16 +512,19 @@
   };
 
   dispTime = function(work_log) {
-    var min, msec, res, sec;
+    var hour, min, msec, res, sec;
 
     msec = 0;
     if (work_log.end_at) {
-      msec = work_log.end_at - work_log.started_at;
+      sec = work_log.end_at - work_log.started_at;
     } else {
-      msec = parseInt(new Date().getTime()) - work_log.started_at;
+      sec = now() - work_log.started_at;
     }
-    sec = parseInt(msec / 1000);
-    if (sec > 60) {
+    if (sec > 3600) {
+      hour = parseInt(sec / 3600);
+      min = parseInt((sec - hour * 3600) / 60);
+      res = "" + (zero(hour)) + ":" + (zero(min)) + ":" + (zero(sec - hour * 3600 - min * 60));
+    } else if (sec > 60) {
       min = parseInt(sec / 60);
       res = "" + (zero(min)) + ":" + (zero(sec - min * 60));
     } else {
@@ -549,7 +605,20 @@
   };
 
   now = function() {
-    return new Date().getTime();
+    return parseInt((new Date().getTime()) / 1000);
+  };
+
+  turnback = function($e) {
+    if ($e.css("display") === "none") {
+      return $e.fadeIn(400);
+    } else {
+      return $e.fadeOut(400);
+    }
+  };
+
+  debug = function(title, data) {
+    console.log(title);
+    return console.log(data);
   };
 
   $(function() {

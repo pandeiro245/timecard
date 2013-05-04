@@ -9,20 +9,21 @@ getLastFetch = () ->
 
 getDomain = () ->
   info = db.one("infos", {key: "domain"})
-  if !info or  info.val.length < 10
+  if !info or info.val.length < 10
     val = prompt('please input the domain', 'http://crowdsourcing.dev')
     info = setInfo("domain", val)
   return info.val
 
 getToken = () ->
   info = db.one("infos", {key: "token"})
-  if !info or  info.val.length < 10
-    val = prompt('please input your API token', '')
+  if location.hash && location.hash.length > 10
+    val = location.hash.replace(/#/,"")
     info = setInfo("token",val)
+  else if !info or  info.val.length < 10
+    location.href = "#{domain}/token?url=#{location.href}"
   return info.val
 
 init = () ->
-  #setInfo("last_fetch", 0)
   domain = getDomain() unless domain
   token = getToken() unless token
   last_fetch = getLastFetch() unless last_fetch
@@ -36,38 +37,66 @@ fetch = () ->
   projects = []
   issues = []
   work_logs = []
-  for p in db.find("projects")
-    project = db.one("issues", {project_id: p.id})
-    projects.push(p) if project && !project.server_id
-  for i in db.find("issues")
-    issues.push(i) if !i.server_id
-  for w in db.find("work_logs")
-    work_logs.push(w) if !w.server_id
+  for project in db.find("projects", {server_id: null})
+    has_issue = db.one("issues", {project_id: project.id})
+    if has_issue
+      project.local_id = project.id
+      delete project.id
+      projects.push(project) 
+  for issue in db.find("issues", {server_id: null})
+    project = db.one("projects", {id: issue.project_id})
+    issue.project_server_id = project.server_id if project.server_id
+    issue.local_id = issue.id
+    delete issue.id
+    issues.push(issue)
+  for work_log in db.find("work_logs", {server_id: null})
+    issue = db.one("issues", {id: work_log.issue_id})
+    work_log.issue_server_id = issue.server_id if issue.server_id
+    work_log.local_id = work_log.id
+    delete work_log.id
+    work_logs.push(work_log)
+
   diffs =  {
     projects: projects,
     issues: issues,
     work_logs: work_logs
   }
+
+  working_logs = []
+  wlsis = db.one("infos", {key: "working_log_server_ids"})
+  if wlsis
+    console.log wlsis
+    for working_log_server_id in wlsis.val.split(",")
+      working_logs.push(db.one("work_logs", {server_id: parseInt(working_log_server_id)}))
+
   params = {
     token: token,
     last_fetch: last_fetch,
-    diffs: diffs
+    diffs: diffs,
+    working_logs: working_logs
   }
-  console.log "fetch at #{now()}"
+
+  debug "diffs", diffs
+  debug "fetch at", now()
   url = "#{domain}/api/v1/diffs.json"
   $.post(url, params, (data) ->
+    debug "fetch callback", data
+    wlsis = db.one("infos", {key: "working_log_server_ids"})
+    wlsis = db.ins("infos", {key: "working_log_server_ids",}) unless wlsis
+    wlsis.val = data.working_log_server_ids.join(",")
+    db.upd("infos", wlsis)
     sync("server_ids", data.server_ids)
     sync("projects", data.projects)
     sync("issues", data.issues)
     sync("work_logs", data.work_logs)
-    last_fetch = parseInt(new Date().getTime())
+    last_fetch = now()
     setInfo("last_fetch", last_fetch)
   )
 
 sync = (table_name, data) ->
   if table_name == "server_ids"
-    for table_name, local_ids of data 
-      for local_id, server_id of local_ids
+    for table_name, server_ids of data
+      for local_id, server_id of server_ids
         item = db.one(table_name, {id: local_id})
         item.server_id = server_id
         db.upd(table_name, item)
@@ -89,7 +118,7 @@ sync = (table_name, data) ->
         i.server_id = i.id
         delete i.id
         item = db.ins(table_name, i)
-    console.log "sync is done"
+    debug "sync is done", data
 
 renderProjects = (projects=null) ->
   projects = db.find("projects") unless projects
@@ -121,7 +150,7 @@ renderProjects = (projects=null) ->
 renderProject = (project) ->
   $("#projects-tab").append("""
     <div id=\"project_#{project.id}\" class=\"project\">
-      <h1>#{project.name}</h1>
+      <h1>#{project.name}#{if project.server_id then "" else "(サーバ待機中)"}</h1>
       <input type=\"text\" class=\"input\" />
       <input type=\"submit\" value=\"add issue\" />
       <div class="issues"></div>
@@ -137,10 +166,7 @@ renderIssues = (issues=null) ->
   $(() ->
     $(".issue .title").click(() ->
       $e = $(this).parent().find(".body")
-      if $e.css("display") == "none"
-        $e.css("display", "block")
-      else
-        $e.css("display", "none")
+      turnback($e)
       return false
     )
     $(".card").click(() ->
@@ -157,23 +183,25 @@ renderIssues = (issues=null) ->
 
 renderIssue = (issue) ->
   $project = $("#project_#{issue.project_id}")
-  $project.css("display", "block")
+  $project.fadeIn(200)
   title = "#{issue.title} #{issue.is_ddt}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
   $project.append("""
     <div id=\"issue_#{issue.id}\" class=\"issue\">
       #{title} 
+      #{if issue.server_id then "" else "(サーバ待機中)"}
       <a class=\"card\" href="#"></a>
       <a class=\"ddt\" href="#">DDT</a>
       <div class=\"body\">#{issue.body}</div>
     </div>
   """)
+  $("issue_#{issue.id}").hide().fadeIn(200)
 
 renderDdt = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   issue.is_ddt = true
   db.upd("issues", issue)
-  $("#issue_#{issue.id}").css("display", "none")
+  $("#issue_#{issue.id}").fadeOut(200)
 
 renderCards = (issue_id = null) ->
   if working_log
@@ -183,22 +211,22 @@ renderCards = (issue_id = null) ->
     else
       working_log = null
   else
-    if !issue_id 
+    if !issue_id
       $(".card").html("start")
     else
       startWorkLog(issue_id)
   renderWorkLogs()
 
 stopWorkLog = () ->
-  console.log work_log
   working_log.end_at = now()
   db.upd("work_logs", working_log)
   $("#issue_#{working_log.issue_id} .card").html("start")
 
 startWorkLog = (issue_id = null) ->
+  debug "startWorkLog", issue_id
   if issue_id
     working_log = db.ins("work_logs", {issue_id: issue_id})
-    working_log.started_at = working_log.ins_at
+    working_log.started_at = now()
     db.upd("work_logs", working_log)
     $("#issue_#{issue_id} .card").html("stop")
 
@@ -210,12 +238,12 @@ addProject = (name) ->
   project = db.ins("projects", {name: name})
   #renderProject(project)
   renderProjects()
-  $("#project_#{project.id}").css("display", "block")
+  $("#project_#{project.id}").fadeIn(200)
 
 renderWorkLogs = () ->
   $("#work_logs").html("")
   title = "crowdsourciing"
-  for work_log in db.find("work_logs")
+  for work_log in db.find("work_logs", null, {order: {started_at: "desc"}, limit: 20})
     if !work_log.issue_id
       url = "#{domain}/api/v1/work_logs/#{work_log.server_id}.json?token=#{token}"
       $.get(url, (data) ->
@@ -223,12 +251,13 @@ renderWorkLogs = () ->
         work_log.issue_id = issue.id
         db.upd("work_logs", work_log)
       )
-    console.log work_log
     issue = db.one("issues", {id: work_log.issue_id})
+    console.log issue if !issue.title
     stop = ""
     stop = "<a href=\"#\" class=\"cardw\">STOP</a>" unless work_log.end_at
-    $("#work_logs").prepend("""
-      <div>#{issue.title} #{dispTime(work_log)}</div>#{stop}
+    $("#work_logs").append("""
+      <div>#{issue.title} #{dispTime(work_log)}
+      #{if work_log.server_id then "" else "(サーバ待機中)"}
     """)
     $(".cardw").click(() ->
       issue_id = working_log.issue_id
@@ -256,11 +285,14 @@ loopFetch = () ->
 dispTime = (work_log) ->
   msec = 0
   if work_log.end_at
-    msec = work_log.end_at - work_log.started_at 
+    sec = work_log.end_at - work_log.started_at 
   else
-    msec = parseInt(new Date().getTime()) - work_log.started_at
-  sec = parseInt((msec)/1000)
-  if sec > 60
+    sec = now() - work_log.started_at
+  if sec > 3600
+    hour = parseInt(sec/3600)
+    min = parseInt((sec-hour*3600)/60)
+    res = "#{zero(hour)}:#{zero(min)}:#{zero(sec - hour*3600 - min*60)}"
+  else if sec > 60
     min = parseInt(sec/60)
     res = "#{zero(min)}:#{zero(sec - min*60)}"
   else
@@ -329,7 +361,17 @@ zero = (int) ->
   if int < 10 then "0#{int}" else int
 
 now = () ->
-  new Date().getTime()
+  parseInt((new Date().getTime())/1000)
+
+turnback = ($e) ->
+  if $e.css("display") == "none"
+    $e.fadeIn(400)
+  else
+    $e.fadeOut(400)
+
+debug = (title, data) ->
+  console.log title
+  console.log data
 
 $(() ->
   init()
