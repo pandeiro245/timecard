@@ -8,15 +8,15 @@ window.schema = {
     dbtype: "",
     has_connect: "off",
     $uniques: "domain",
-  }
+  },
   projects: {
-    name: ""
+    name: "",
     body: "",
     server_id: 0,
-    #$uniques: "server_id"
+    //$uniques: "server_id"
   },
   issues: {
-    title: ""
+    title: "",
     body: "",
     project_id: 0,
     server_id: 0,
@@ -26,14 +26,15 @@ window.schema = {
     assignee_id: 0,
     will_start_on: "",
     parent_id:0
-    #$uniques: "server_id"
+    //$uniques: "server_id"
   },
   work_logs: {
-    issue_id: 0
+    issue_id: 0,
     started_at: 0,
     end_at: 0,
     server_id: 0,
-    #$uniques: "server_id"
+    user_id: 0,
+    //$uniques: "server_id"
   },
   infos: {
     key: "",
@@ -41,5 +42,3 @@ window.schema = {
     $uniques: "key"
   },
 }
-
-

@@ -41,7 +41,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, pushIfHasIssue, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, pushIfHasIssue, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
 
   working_log = null;
 
@@ -50,7 +50,7 @@
     prepareAddProject();
     renderProjects();
     renderIssues();
-    loopFetch();
+    renderWorkLogs();
     return loopRenderWorkLogs();
   };
 
@@ -234,13 +234,16 @@
         token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c');
         url = "" + domain + "/api/v1/users.json?token=" + token;
         return $.get(url, function(data) {
-          return db.ins("servers", {
+          var server;
+
+          server = db.ins("servers", {
             domain: domain,
             token: token,
             user_id: data.id,
             has_connect: true,
             dbtype: dbtype
           });
+          return console.log(server);
         });
       } else if (domain.match("redmine")) {
         dbtype = "redmine";
@@ -304,26 +307,23 @@
         renderIssue(issue);
       }
     }
-    renderCards();
+    return renderCards();
+  };
+
+  prepareCards = function(issue_id) {
     return $(function() {
-      $(".issue .title").click(function() {
+      $("#issue_" + issue_id + " div div h2").click(function() {
         var $e;
 
         $e = $(this).parent().find(".body");
         turnback($e);
         return false;
       });
-      $(".card").click(function() {
-        var issue_id;
-
-        issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "");
+      $("#issue_" + issue_id + " div div .card").click(function() {
         renderCards(issue_id);
         return false;
       });
-      return $(".ddt").click(function() {
-        var issue_id;
-
-        issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "");
+      return $("#issue_" + issue_id + " div div .ddt").click(function() {
         renderDdt(issue_id);
         return false;
       });
@@ -331,7 +331,7 @@
   };
 
   renderIssue = function(issue, target) {
-    var $project, icon, title;
+    var $project, icon, start_or_end, title;
 
     if (target == null) {
       target = "append";
@@ -343,13 +343,15 @@
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
     icon = issue.server_id ? "" : uploading_icon;
+    start_or_end = working_log && working_log.issue_id === issue.id ? "End" : "Start";
     return umecob({
       use: 'jquery',
       tpl_id: "./partials/issue.html",
       data: {
         issue: issue,
         title: title,
-        icon: icon
+        icon: icon,
+        start_or_end: start_or_end
       }
     }).next(function(html) {
       if (target === "append") {
@@ -357,7 +359,8 @@
       } else {
         $project.prepend(html);
       }
-      return $("issue_" + issue.id).hide().fadeIn(200);
+      $("issue_" + issue.id).hide().fadeIn(200);
+      return prepareCards(issue.id);
     });
   };
 
@@ -401,15 +404,21 @@
   };
 
   startWorkLog = function(issue_id) {
+    var cond;
+
     if (issue_id == null) {
       issue_id = null;
     }
-    if (issue_id) {
-      working_log = db.ins("work_logs", {
-        issue_id: issue_id
-      });
-      working_log.started_at = now();
-      db.upd("work_logs", working_log);
+    if (issue_id && !working_log) {
+      cond = {
+        issue_id: issue_id,
+        started_at: now(),
+        user_id: 0
+      };
+      working_log = db.one("work_logs", cond);
+      if (!working_log) {
+        working_log = db.ins("work_logs", cond);
+      }
       return $("#issue_" + issue_id + " .card").html("stop");
     }
   };
@@ -454,7 +463,7 @@
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       work_log = _ref[_i];
-      if (!work_log.issue_id) {
+      if (!work_log.issue_id && server) {
         url = "" + server.domain + "/api/v1/work_logs/" + work_log.server_id + ".json?token=" + server.token;
         $.get(url, function(item) {
           return sync_item(server, "work_logs", item);
@@ -473,7 +482,7 @@
       if (!work_log.end_at) {
         stop = "<a href=\"#\" class=\"cardw\">STOP</a>";
       }
-      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
+      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">\n" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
       $(".cardw").click(function() {
         var issue_id;
 
@@ -491,8 +500,13 @@
   };
 
   renderWorkingLog = function() {
+    var time;
+
     if (working_log) {
-      return $(".work_log_" + working_log.id + " .time").html(dispTime(working_log));
+      time = dispTime(working_log);
+      $(".work_log_" + working_log.id + " .time").html(time);
+      $("#issue_" + working_log.issue_id + " h2 .time").html("(" + time + ")");
+      return $("#issue_" + working_log.issue_id + " div div .card").html("End");
     }
   };
 
@@ -662,52 +676,10 @@
     return console.log(data);
   };
 
+  window.db = db;
+
   $(function() {
     return init();
   });
-
-}).call(this);
-
-(function() {
-  window.schema = {
-    servers: {
-      domain: "",
-      login: "",
-      pass: "",
-      token: "",
-      user_id: 0,
-      dbtype: "",
-      has_connect: "off",
-      $uniques: "domain"
-    },
-    projects: {
-      name: "",
-      body: "",
-      server_id: 0
-    },
-    issues: {
-      title: "",
-      body: "",
-      project_id: 0,
-      server_id: 0,
-      is_ddt: "off",
-      is_closed: "off",
-      user_id: 0,
-      assignee_id: 0,
-      will_start_on: "",
-      parent_id: 0
-    },
-    work_logs: {
-      issue_id: 0,
-      started_at: 0,
-      end_at: 0,
-      server_id: 0
-    },
-    infos: {
-      key: "",
-      val: "",
-      $uniques: "key"
-    }
-  };
 
 }).call(this);

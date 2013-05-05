@@ -5,8 +5,9 @@ init = () ->
   prepareAddProject()
   renderProjects()
   renderIssues()
-  loopFetch()
+  renderWorkLogs()
   loopRenderWorkLogs()
+  #loopFetch()
 
 fetch = (server) ->
   domain = server.domain
@@ -115,13 +116,14 @@ prepareAddServer = () ->
       token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c')
       url = "#{domain}/api/v1/users.json?token=#{token}"
       $.get(url, (data) ->
-        db.ins("servers", {
+        server = db.ins("servers", {
           domain: domain,
           token: token,
           user_id: data.id,
           has_connect: true,
           dbtype: dbtype
         })
+        console.log server
       )
     else if domain.match("redmine")
       dbtype = "redmine"
@@ -175,19 +177,19 @@ renderIssues = (issues=null) ->
   for issue in issues
     renderIssue(issue) if !issue.is_ddt && !issue.will_start_on
   renderCards()
+
+prepareCards = (issue_id) ->
   $(() ->
-    $(".issue .title").click(() ->
+    $("#issue_#{issue_id} div div h2").click(() ->
       $e = $(this).parent().find(".body")
       turnback($e)
       return false
     )
-    $(".card").click(() ->
-      issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "")
+    $("#issue_#{issue_id} div div .card").click(() ->
       renderCards(issue_id)
       return false
     )
-    $(".ddt").click(() ->
-      issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "")
+    $("#issue_#{issue_id} div div .ddt").click(() ->
       renderDdt(issue_id)
       return false
     )
@@ -199,16 +201,21 @@ renderIssue = (issue, target="append") ->
   title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
   icon = if issue.server_id then "" else uploading_icon
+  start_or_end = if working_log && working_log.issue_id == issue.id then "End" else "Start"
+
   umecob({use: 'jquery', tpl_id: "./partials/issue.html", data:{
     issue: issue,
     title: title,
-    icon: icon
+    icon: icon,
+    start_or_end: start_or_end
   }}).next((html) ->
     if target == "append"
       $project.append(html)
     else
       $project.prepend(html)
     $("issue_#{issue.id}").hide().fadeIn(200)
+    prepareCards(issue.id)
+
   )
 
 renderDdt = (issue_id) ->
@@ -236,10 +243,10 @@ stopWorkLog = () ->
   $("#issue_#{working_log.issue_id} .card").html("start")
 
 startWorkLog = (issue_id = null) ->
-  if issue_id
-    working_log = db.ins("work_logs", {issue_id: issue_id})
-    working_log.started_at = now()
-    db.upd("work_logs", working_log)
+  if issue_id && !working_log
+    cond = {issue_id: issue_id, started_at: now(), user_id:0}
+    working_log = db.one("work_logs", cond)
+    working_log = db.ins("work_logs", cond) unless working_log
     $("#issue_#{issue_id} .card").html("stop")
 
 addIssue = (project_id, title) ->
@@ -255,7 +262,7 @@ addProject = (name) ->
 renderWorkLogs = (server=null) ->
   $("#work_logs").html("")
   for work_log in db.find("work_logs", null, {order: {started_at: "desc"}, limit: 20})
-    if !work_log.issue_id
+    if !work_log.issue_id && server
       url = "#{server.domain}/api/v1/work_logs/#{work_log.server_id}.json?token=#{server.token}"
       $.get(url, (item) ->
         sync_item(server, "work_logs", item)
@@ -267,7 +274,8 @@ renderWorkLogs = (server=null) ->
     stop = ""
     stop = "<a href=\"#\" class=\"cardw\">STOP</a>" unless work_log.end_at
     $("#work_logs").append("""
-      <li class=\"work_log_#{work_log.id}\">#{issue.title}
+      <li class=\"work_log_#{work_log.id}\">
+      #{issue.title}
       <span class=\"time\">#{dispTime(work_log)}</span>
       #{if work_log.server_id then "" else uploading_icon}
       #{stop}
@@ -283,7 +291,10 @@ renderWorkLogs = (server=null) ->
 
 renderWorkingLog = () ->
   if working_log
-    $(".work_log_#{working_log.id} .time").html(dispTime(working_log))
+    time = dispTime(working_log)
+    $(".work_log_#{working_log.id} .time").html(time)
+    $("#issue_#{working_log.issue_id} h2 .time").html("(#{time})")
+    $("#issue_#{working_log.issue_id} div div .card").html("End")
 
 loopRenderWorkLogs = () ->
   renderWorkingLog()
@@ -328,6 +339,7 @@ setInfo = (key, val) ->
   else
     info = db.ins("infos", {key: key, val: val})
   info
+
 
 db = JSRel.use("crowdsourcing", {
   schema: window.schema,
@@ -382,6 +394,8 @@ forUploadWorkLog = (work_log) ->
 debug = (title, data) ->
   console.log title
   console.log data
+
+window.db = db
 
 $(() ->
   init()
