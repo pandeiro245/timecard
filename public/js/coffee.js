@@ -41,24 +41,24 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, domain, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, pushIfHasIssue, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, schema, setInfo, startWorkLog, stopWorkLog, sync, sync_item, token, turnback, uploading_icon, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, pushIfHasIssue, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
 
   working_log = null;
 
   init = function() {
+    prepareAddServer();
     prepareAddProject();
-    domain();
-    token();
     renderProjects();
     renderIssues();
-    fetch();
     loopFetch();
     return loopRenderWorkLogs();
   };
 
-  fetch = function() {
-    var diffs, issue, issues, params, project, projects, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
+  fetch = function(server) {
+    var diffs, domain, issue, issues, params, project, projects, token, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
 
+    domain = server.domain;
+    token = server.token;
     projects = [];
     issues = [];
     work_logs = [];
@@ -87,7 +87,6 @@
       key: "working_log_server_ids"
     });
     if (wlsis) {
-      console.log(wlsis);
       _ref3 = wlsis.val.split(",");
       for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
         working_log_server_id = _ref3[_l];
@@ -97,16 +96,15 @@
       }
     }
     params = {
-      token: token(),
+      token: token,
       last_fetch: last_fetch(),
       diffs: diffs,
       working_logs: working_logs
     };
     debug("diffs", diffs);
     debug("fetch at", now());
-    url = "" + (domain()) + "/api/v1/diffs.json";
+    url = "" + domain + "/api/v1/diffs.json";
     return $.post(url, params, function(data) {
-      debug("fetch callback", data);
       wlsis = db.one("infos", {
         key: "working_log_server_ids"
       });
@@ -117,16 +115,17 @@
       }
       wlsis.val = data.working_log_server_ids.join(",");
       db.upd("infos", wlsis);
-      sync("server_ids", data.server_ids);
-      sync("projects", data.projects);
-      sync("issues", data.issues);
-      sync("work_logs", data.work_logs);
+      sync(server, "server_ids", data.server_ids);
+      sync(server, "projects", data.projects);
+      sync(server, "issues", data.issues);
+      sync(server, "work_logs", data.work_logs);
+      renderWorkLogs(server);
       return last_fetch(now());
     });
   };
 
-  sync = function(table_name, data) {
-    var i, item, local_id, server_id, server_ids, _i, _len, _results;
+  sync = function(server, table_name, data) {
+    var i, item, local_id, server_id, server_ids, _i, _len, _results, _results1;
 
     if (table_name === "server_ids") {
       _results = [];
@@ -149,16 +148,17 @@
       }
       return _results;
     } else {
+      _results1 = [];
       for (_i = 0, _len = data.length; _i < _len; _i++) {
         i = data[_i];
-        sync_item(table_name, i);
+        _results1.push(sync_item(server, table_name, i));
       }
-      return debug("sync is done", data);
+      return _results1;
     }
   };
 
-  sync_item = function(table_name, i) {
-    var cond, issue, item, project, server_project, url;
+  sync_item = function(server, table_name, i) {
+    var issue, item, url;
 
     if (i.project_id) {
       i.project_id = db.one("projects", {
@@ -172,9 +172,9 @@
       if (issue) {
         i.issue_id = issue.id;
       } else {
-        url = "" + (domain()) + "/api/v1/issues/" + i.issue_id + ".json?token=" + (token());
+        url = "" + server.domain + "/api/v1/issues/" + i.issue_id + ".json?token=" + server.token;
         $.get(url, function(item) {
-          return sync_item("issues", item);
+          return sync_item(server, "issues", item);
         });
         i.issue_id = 0;
       }
@@ -188,42 +188,22 @@
     if (item) {
       i.id = item.id;
       item = i;
-      db.upd(table_name, item);
+      return db.upd(table_name, item);
     } else {
       i.server_id = i.id;
       delete i.id;
-      item = db.ins(table_name, i);
-    }
-    if (i.is_github) {
-      db.ins("server_issues", {
-        server_id: 1,
-        issue_id: item.id,
-        issue_server_id: i.github_issue_id
-      });
-    }
-    if (i.github_repository_id) {
-      project = db.one("projects", {
-        id: item.project_id
-      });
-      cond = {
-        server_id: 1,
-        project_id: project.id,
-        project_server_id: i.github_repository_id
-      };
-      server_project = db.one("server_projects", cond);
-      return db.ins("server_projects", cond);
+      return item = db.ins(table_name, i);
     }
   };
 
-  renderProjects = function(projects) {
-    var project, _i, _len;
+  renderProjects = function() {
+    var project, projects, _i, _len;
 
-    if (projects == null) {
-      projects = null;
-    }
-    if (!projects) {
-      projects = db.find("projects");
-    }
+    projects = db.find("projects", null, {
+      order: {
+        id: "asc"
+      }
+    });
     $("#issues").html("");
     for (_i = 0, _len = projects.length; _i < _len; _i++) {
       project = projects[_i];
@@ -240,6 +220,44 @@
         return $(target).val("");
       } else {
         return alert("please input the title");
+      }
+    });
+  };
+
+  prepareAddServer = function() {
+    return hl.click(".add_server", function(e, target) {
+      var dbtype, domain, token, url;
+
+      domain = prompt('please input the domain', 'http://crowdsourcing.dev');
+      if (domain.match("crowdsourcing") || domain.match("cs.mindia.jp")) {
+        dbtype = "cs";
+        token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c');
+        url = "" + domain + "/api/v1/users.json?token=" + token;
+        return $.get(url, function(data) {
+          return db.ins("servers", {
+            domain: domain,
+            token: token,
+            user_id: data.id,
+            has_connect: true,
+            dbtype: dbtype
+          });
+        });
+      } else if (domain.match("redmine")) {
+        dbtype = "redmine";
+        token = prompt('please input login id', 'nishiko');
+        token = prompt('please input login pass', '');
+        return $.get(url, function(data) {
+          return db.ins("servers", {
+            domain: domain,
+            login: login,
+            pass: pass,
+            user_id: data.id,
+            has_connect: true,
+            dbtype: dbtype
+          });
+        });
+      } else {
+        return alert("invalid domain");
       }
     });
   };
@@ -313,24 +331,34 @@
   };
 
   renderIssue = function(issue, target) {
-    var $project, html, title;
+    var $project, icon, title;
 
     if (target == null) {
       target = "append";
     }
     $project = $("#project_" + issue.project_id);
     $project.fadeIn(200);
-    title = "" + issue.title + " " + issue.is_ddt;
+    title = "" + issue.title;
     if (issue.body && issue.body.length > 0) {
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
-    html = "<div id=\"issue_" + issue.id + "\" class=\"issue span3\">\n  <h2>" + title + "\n  " + (issue.server_id ? "" : uploading_icon) + "\n  </h2>\n  <div class=\"btn-toolbar\">\n  <div class=\"btn-group\">\n  <a class=\"card btn\" href=\"#\"></a>\n  <a class=\"ddt btn\" href=\"#\">DDT</a>\n  <a class=\"cls btn\" href=\"#\">close</a>\n  <div class=\"body\">" + issue.body + "</div>\n  </div>\n  </div>\n</div>";
-    if (target === "append") {
-      $project.append(html);
-    } else {
-      $project.prepend(html);
-    }
-    return $("issue_" + issue.id).hide().fadeIn(200);
+    icon = issue.server_id ? "" : uploading_icon;
+    return umecob({
+      use: 'jquery',
+      tpl_id: "./partials/issue.html",
+      data: {
+        issue: issue,
+        title: title,
+        icon: icon
+      }
+    }).next(function(html) {
+      if (target === "append") {
+        $project.append(html);
+      } else {
+        $project.prepend(html);
+      }
+      return $("issue_" + issue.id).hide().fadeIn(200);
+    });
   };
 
   renderDdt = function(issue_id) {
@@ -353,18 +381,17 @@
         stopWorkLog();
       }
       if (parseInt(issue_id) !== parseInt(working_log.issue_id)) {
-        startWorkLog(issue_id);
+        return startWorkLog(issue_id);
       } else {
-        working_log = null;
+        return working_log = null;
       }
     } else {
       if (!issue_id) {
-        $(".card").html("start");
+        return $(".card").html("Start");
       } else {
-        startWorkLog(issue_id);
+        return startWorkLog(issue_id);
       }
     }
-    return renderWorkLogs();
   };
 
   stopWorkLog = function() {
@@ -377,7 +404,6 @@
     if (issue_id == null) {
       issue_id = null;
     }
-    debug("startWorkLog", issue_id);
     if (issue_id) {
       working_log = db.ins("work_logs", {
         issue_id: issue_id
@@ -412,23 +438,26 @@
     return project;
   };
 
-  renderWorkLogs = function() {
-    var issue, stop, title, url, work_log, _i, _len, _ref;
+  renderWorkLogs = function(server) {
+    var issue, stop, url, work_log, _i, _len, _ref, _results;
 
+    if (server == null) {
+      server = null;
+    }
     $("#work_logs").html("");
-    title = "crowdsourciing";
     _ref = db.find("work_logs", null, {
       order: {
         started_at: "desc"
       },
       limit: 20
     });
+    _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       work_log = _ref[_i];
       if (!work_log.issue_id) {
-        url = "" + (domain()) + "/api/v1/work_logs/" + work_log.server_id + ".json?token=" + (token());
+        url = "" + server.domain + "/api/v1/work_logs/" + work_log.server_id + ".json?token=" + server.token;
         $.get(url, function(item) {
-          return sync_item("work_logs", item);
+          return sync_item(server, "work_logs", item);
         });
       }
       if (work_log.issue_id !== 0) {
@@ -444,7 +473,7 @@
       if (!work_log.end_at) {
         stop = "<a href=\"#\" class=\"cardw\">STOP</a>";
       }
-      $("#work_logs").append("<li class=\"active\">" + issue.title + " " + (dispTime(work_log)) + "\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
+      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
       $(".cardw").click(function() {
         var issue_id;
 
@@ -453,27 +482,38 @@
         return false;
       });
       if (!work_log.end_at) {
-        title = dispTime(work_log);
-        working_log = work_log;
+        _results.push(working_log = work_log);
+      } else {
+        _results.push(void 0);
       }
     }
-    return title;
+    return _results;
+  };
+
+  renderWorkingLog = function() {
+    if (working_log) {
+      return $(".work_log_" + working_log.id + " .time").html(dispTime(working_log));
+    }
   };
 
   loopRenderWorkLogs = function() {
-    window.title = renderWorkLogs();
+    renderWorkingLog();
     return setTimeout(function() {
       return loopRenderWorkLogs();
     }, 1000);
   };
 
   loopFetch = function() {
-    if (last_fetch() > 0) {
-      fetch();
-      return setTimeout(function() {
-        return loopFetch();
-      }, 1000 * 10);
+    var server, _i, _len, _ref;
+
+    _ref = db.find("servers");
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      server = _ref[_i];
+      fetch(server);
     }
+    return setTimeout(function() {
+      return loopFetch();
+    }, 1000 * 10);
   };
 
   last_fetch = function(sec) {
@@ -493,34 +533,6 @@
     } else {
       return 0;
     }
-  };
-
-  domain = function() {
-    var info, val;
-
-    info = db.one("infos", {
-      key: "domain"
-    });
-    if (!info || info.val.length < 10) {
-      val = prompt('please input the domain', 'http://crowdsourcing.dev');
-      info = setInfo("domain", val);
-    }
-    return info.val;
-  };
-
-  token = function() {
-    var info, val;
-
-    info = db.one("infos", {
-      key: "token"
-    });
-    if (location.hash && location.hash.length > 10) {
-      val = location.hash.replace(/#/, "");
-      info = setInfo("token", val);
-    } else if (!info || info.val.length < 10) {
-      location.href = "" + domain + "/token?url=" + location.href;
-    }
-    return info.val;
   };
 
   dispTime = function(work_log) {
@@ -563,61 +575,8 @@
     return info;
   };
 
-  schema = {
-    servers: {
-      domain: "",
-      $uniques: "domain"
-    },
-    users: {
-      server_id: 0,
-      name: ""
-    },
-    projects: {
-      name: "",
-      body: "",
-      server_id: 0
-    },
-    issues: {
-      title: "",
-      body: "",
-      project_id: 0,
-      server_id: 0,
-      is_ddt: "off",
-      is_closed: "off",
-      user_id: 0,
-      assignee_id: 0,
-      will_start_on: ""
-    },
-    work_logs: {
-      issue_id: 0,
-      started_at: 0,
-      end_at: 0,
-      server_id: 0
-    },
-    work_comments: {
-      issue_id: 0,
-      user_id: 0,
-      body: ""
-    },
-    infos: {
-      key: "",
-      val: "",
-      $uniques: "key"
-    },
-    server_projects: {
-      server_id: 0,
-      project_id: 0,
-      project_server_id: 0
-    },
-    server_issues: {
-      server_id: 0,
-      issue_id: 0,
-      issue_server_id: 0
-    }
-  };
-
   db = JSRel.use("crowdsourcing", {
-    schema: schema,
+    schema: window.schema,
     autosave: true
   });
 
@@ -706,5 +665,49 @@
   $(function() {
     return init();
   });
+
+}).call(this);
+
+(function() {
+  window.schema = {
+    servers: {
+      domain: "",
+      login: "",
+      pass: "",
+      token: "",
+      user_id: 0,
+      dbtype: "",
+      has_connect: "off",
+      $uniques: "domain"
+    },
+    projects: {
+      name: "",
+      body: "",
+      server_id: 0
+    },
+    issues: {
+      title: "",
+      body: "",
+      project_id: 0,
+      server_id: 0,
+      is_ddt: "off",
+      is_closed: "off",
+      user_id: 0,
+      assignee_id: 0,
+      will_start_on: "",
+      parent_id: 0
+    },
+    work_logs: {
+      issue_id: 0,
+      started_at: 0,
+      end_at: 0,
+      server_id: 0
+    },
+    infos: {
+      key: "",
+      val: "",
+      $uniques: "key"
+    }
+  };
 
 }).call(this);

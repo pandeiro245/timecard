@@ -1,16 +1,16 @@
 working_log = null
 
 init = () ->
+  prepareAddServer()
   prepareAddProject()
-  domain()
-  token()
   renderProjects()
   renderIssues()
-  fetch()
   loopFetch()
   loopRenderWorkLogs()
 
-fetch = () ->
+fetch = (server) ->
+  domain = server.domain
+  token = server.token
   projects = []
   issues = []
   work_logs = []
@@ -28,12 +28,11 @@ fetch = () ->
   working_logs = []
   wlsis = db.one("infos", {key: "working_log_server_ids"})
   if wlsis
-    console.log wlsis
     for working_log_server_id in wlsis.val.split(",")
       working_logs.push(db.one("work_logs", {server_id: parseInt(working_log_server_id)}))
 
   params = {
-    token: token(),
+    token: token,
     last_fetch: last_fetch(),
     diffs: diffs,
     working_logs: working_logs
@@ -41,21 +40,21 @@ fetch = () ->
 
   debug "diffs", diffs
   debug "fetch at", now()
-  url = "#{domain()}/api/v1/diffs.json"
+  url = "#{domain}/api/v1/diffs.json"
   $.post(url, params, (data) ->
-    debug "fetch callback", data
     wlsis = db.one("infos", {key: "working_log_server_ids"})
     wlsis = db.ins("infos", {key: "working_log_server_ids",}) unless wlsis
     wlsis.val = data.working_log_server_ids.join(",")
     db.upd("infos", wlsis)
-    sync("server_ids", data.server_ids)
-    sync("projects", data.projects)
-    sync("issues", data.issues)
-    sync("work_logs", data.work_logs)
+    sync(server, "server_ids", data.server_ids)
+    sync(server, "projects", data.projects)
+    sync(server, "issues", data.issues)
+    sync(server, "work_logs", data.work_logs)
+    renderWorkLogs(server)
     last_fetch(now())
   )
 
-sync = (table_name, data) ->
+sync = (server, table_name, data) ->
   if table_name == "server_ids"
     for table_name, server_ids of data
       for local_id, server_id of server_ids
@@ -64,10 +63,9 @@ sync = (table_name, data) ->
         db.upd(table_name, item)
   else
     for i in data
-      sync_item(table_name, i)
-    debug "sync is done", data
+      sync_item(server, table_name, i)
 
-sync_item = (table_name, i) ->
+sync_item = (server, table_name, i) ->
   if i.project_id
     i.project_id = db.one("projects", {server_id: i.project_id}).id
   if i.issue_id
@@ -75,9 +73,9 @@ sync_item = (table_name, i) ->
     if issue
       i.issue_id = issue.id
     else
-      url = "#{domain()}/api/v1/issues/#{i.issue_id}.json?token=#{token()}"
+      url = "#{server.domain}/api/v1/issues/#{i.issue_id}.json?token=#{server.token}"
       $.get(url, (item) ->
-        sync_item("issues", item)
+        sync_item(server, "issues", item)
       )
       i.issue_id = 0
   if i.closed_at
@@ -91,16 +89,9 @@ sync_item = (table_name, i) ->
     i.server_id = i.id
     delete i.id
     item = db.ins(table_name, i)
-  if i.is_github
-    db.ins("server_issues", {server_id: 1, issue_id: item.id, issue_server_id: i.github_issue_id})
-  if i.github_repository_id
-    project = db.one("projects", {id: item.project_id})
-    cond = {server_id: 1, project_id: project.id, project_server_id: i.github_repository_id }
-    server_project = db.one("server_projects", cond)
-    db.ins("server_projects", cond)
 
-renderProjects = (projects=null) ->
-  projects = db.find("projects") unless projects
+renderProjects = () ->
+  projects = db.find("projects", null, {order: {id: "asc"}})
   $("#issues").html("")
   for project in projects
     renderProject(project)
@@ -113,6 +104,42 @@ renderProjects = (projects=null) ->
       $(target).val("")
     else
       alert "please input the title"
+  )
+
+prepareAddServer = () ->
+  hl.click(".add_server", (e, target)->
+    #domain = prompt('please input the domain', 'http://redmine.dev/')
+    domain = prompt('please input the domain', 'http://crowdsourcing.dev')
+    if domain.match("crowdsourcing") or domain.match("cs.mindia.jp")
+      dbtype = "cs"
+      token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c')
+      url = "#{domain}/api/v1/users.json?token=#{token}"
+      $.get(url, (data) ->
+        db.ins("servers", {
+          domain: domain,
+          token: token,
+          user_id: data.id,
+          has_connect: true,
+          dbtype: dbtype
+        })
+      )
+    else if domain.match("redmine")
+      dbtype = "redmine"
+      #url = "#{domain}/api/v1/users.json"
+      token = prompt('please input login id', 'nishiko')
+      token = prompt('please input login pass', '')
+      $.get(url, (data) ->
+        db.ins("servers", {
+          domain: domain,
+          login: login,
+          pass: pass,
+          user_id: data.id,
+          has_connect: true,
+          dbtype: dbtype
+        })
+      )
+    else
+      alert "invalid domain"
   )
 
 prepareAddProject = () ->
@@ -169,28 +196,20 @@ renderIssues = (issues=null) ->
 renderIssue = (issue, target="append") ->
   $project = $("#project_#{issue.project_id}")
   $project.fadeIn(200)
-  title = "#{issue.title} #{issue.is_ddt}"
+  title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
-  html = """
-    <div id=\"issue_#{issue.id}\" class=\"issue span3\">
-      <h2>#{title}
-      #{if issue.server_id then "" else uploading_icon}
-      </h2>
-      <div class="btn-toolbar">
-      <div class="btn-group">
-      <a class=\"card btn\" href="#"></a>
-      <a class=\"ddt btn\" href="#">DDT</a>
-      <a class=\"cls btn\" href="#">close</a>
-      <div class=\"body\">#{issue.body}</div>
-      </div>
-      </div>
-    </div>
-  """
-  if target == "append"
-    $project.append(html)
-  else
-    $project.prepend(html)
-  $("issue_#{issue.id}").hide().fadeIn(200)
+  icon = if issue.server_id then "" else uploading_icon
+  umecob({use: 'jquery', tpl_id: "./partials/issue.html", data:{
+    issue: issue,
+    title: title,
+    icon: icon
+  }}).next((html) ->
+    if target == "append"
+      $project.append(html)
+    else
+      $project.prepend(html)
+    $("issue_#{issue.id}").hide().fadeIn(200)
+  )
 
 renderDdt = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
@@ -207,10 +226,9 @@ renderCards = (issue_id = null) ->
       working_log = null
   else
     if !issue_id
-      $(".card").html("start")
+      $(".card").html("Start")
     else
       startWorkLog(issue_id)
-  renderWorkLogs()
 
 stopWorkLog = () ->
   working_log.end_at = now()
@@ -218,7 +236,6 @@ stopWorkLog = () ->
   $("#issue_#{working_log.issue_id} .card").html("start")
 
 startWorkLog = (issue_id = null) ->
-  debug "startWorkLog", issue_id
   if issue_id
     working_log = db.ins("work_logs", {issue_id: issue_id})
     working_log.started_at = now()
@@ -235,14 +252,13 @@ addProject = (name) ->
   $("#project_#{project.id}").fadeIn(200)
   return project
 
-renderWorkLogs = () ->
+renderWorkLogs = (server=null) ->
   $("#work_logs").html("")
-  title = "crowdsourciing"
   for work_log in db.find("work_logs", null, {order: {started_at: "desc"}, limit: 20})
     if !work_log.issue_id
-      url = "#{domain()}/api/v1/work_logs/#{work_log.server_id}.json?token=#{token()}"
+      url = "#{server.domain}/api/v1/work_logs/#{work_log.server_id}.json?token=#{server.token}"
       $.get(url, (item) ->
-        sync_item("work_logs", item)
+        sync_item(server, "work_logs", item)
       )
     if work_log.issue_id != 0
       issue = db.one("issues", {id: work_log.issue_id})
@@ -251,7 +267,8 @@ renderWorkLogs = () ->
     stop = ""
     stop = "<a href=\"#\" class=\"cardw\">STOP</a>" unless work_log.end_at
     $("#work_logs").append("""
-      <li class="active">#{issue.title} #{dispTime(work_log)}
+      <li class=\"work_log_#{work_log.id}\">#{issue.title}
+      <span class=\"time\">#{dispTime(work_log)}</span>
       #{if work_log.server_id then "" else uploading_icon}
       #{stop}
       </li>
@@ -262,43 +279,29 @@ renderWorkLogs = () ->
       return false
     )
     if !work_log.end_at
-      title = dispTime(work_log)
       working_log = work_log
-  title
+
+renderWorkingLog = () ->
+  if working_log
+    $(".work_log_#{working_log.id} .time").html(dispTime(working_log))
 
 loopRenderWorkLogs = () ->
-  window.title = renderWorkLogs()
+  renderWorkingLog()
   setTimeout(()->
     loopRenderWorkLogs()
   ,1000)
 
 loopFetch = () ->
-  if last_fetch() > 0
-    fetch()
-    setTimeout(()->
-      loopFetch()
-    ,1000*10)
+  for server in db.find("servers")
+    fetch(server)
+  setTimeout(()->
+    loopFetch()
+  ,1000*10)
 
 last_fetch = (sec = null) ->
   setInfo("last_fetch", sec) if sec
   info = db.one("infos", {key: "last_fetch"})
   if info then info.val else 0
-
-domain = () ->
-  info = db.one("infos", {key: "domain"})
-  if !info or info.val.length < 10
-    val = prompt('please input the domain', 'http://crowdsourcing.dev')
-    info = setInfo("domain", val)
-  return info.val
-
-token = () ->
-  info = db.one("infos", {key: "token"})
-  if location.hash && location.hash.length > 10
-    val = location.hash.replace(/#/,"")
-    info = setInfo("token",val)
-  else if !info or  info.val.length < 10
-    location.href = "#{domain}/token?url=#{location.href}"
-  return info.val
 
 dispTime = (work_log) ->
   msec = 0
@@ -326,65 +329,8 @@ setInfo = (key, val) ->
     info = db.ins("infos", {key: key, val: val})
   info
 
-schema = {
-  servers: {
-    domain: "",
-    $uniques: "domain",
-  }
-  users: {
-    server_id:0,
-    name: ""
-    #$uniques: "server_id"
-  }
-  projects: {
-    name: ""
-    body: "",
-    server_id: 0,
-    #$uniques: "server_id"
-  },
-  issues: {
-    title: ""
-    body: "",
-    project_id: 0,
-    server_id: 0,
-    is_ddt: "off",
-    is_closed: "off",
-    user_id: 0,
-    assignee_id: 0,
-    will_start_on: "",
-    #$uniques: "server_id"
-  },
-  work_logs: {
-    issue_id: 0
-    started_at: 0,
-    end_at: 0,
-    server_id: 0,
-    #$uniques: "server_id"
-  },
-  work_comments: {
-    issue_id: 0,
-    user_id: 0,
-    body: "",
-  },
-  infos: {
-    key: "",
-    val: "",
-    $uniques: "key"
-  },
-  server_projects:{
-    server_id: 0,
-    project_id: 0,
-    project_server_id: 0
-  },
-  server_issues:{
-    server_id: 0,
-    issue_id: 0,
-    issue_server_id: 0,
-  },
-}
-
 db = JSRel.use("crowdsourcing", {
-  schema: schema,
+  schema: window.schema,
   autosave: true
 })
 
