@@ -51,6 +51,7 @@
     renderProjects();
     renderIssues();
     renderWorkLogs();
+    loopFetch();
     return loopRenderWorkLogs();
   };
 
