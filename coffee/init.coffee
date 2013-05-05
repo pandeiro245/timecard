@@ -24,13 +24,14 @@ getToken = () ->
   return info.val
 
 init = () ->
+  prepareAddProject()
   domain = getDomain() unless domain
   token = getToken() unless token
   last_fetch = getLastFetch() unless last_fetch
   renderProjects()
   renderIssues()
-  fetch()
-  loopFetch()
+  #fetch()
+  #loopFetch()
   loopRenderWorkLogs()
 
 fetch = () ->
@@ -139,46 +140,52 @@ sync_item = (table_name, i) ->
 
 renderProjects = (projects=null) ->
   projects = db.find("projects") unless projects
-  $("#projects-tab").html("<div id=\"new_project\"></div>")
-  $("#new_project").html("""
-      <input type=\"text\" class=\"input\" />
-      <input type=\"submit\" value=\"add project\" />
-  """)
+  $("#issues").html("")
   for project in projects
     renderProject(project)
   hl.enter(".input", (e, target)->
     title = $(target).val()
-    $project = $(target).parent()
-    if $project.attr("id").match("project_")
-      project_id = $project.attr("id").replace("project_","")
-      if title.length > 0
-        addIssue(project_id, title)
-        $(target).val("")
-      else
-        alert "please input the title"
-    else #new_project
-      if title.length > 0
-        addProject(title)
-        $(target).val("")
-      else
-        alert "please input the title"
+    $project = $(target).parent().parent().parent()
+    project_id = $project.attr("id").replace("project_","")
+    if title.length > 0
+      addIssue(project_id, title)
+      $(target).val("")
+    else
+      alert "please input the title"
+  )
+
+prepareAddProject = () ->
+  hl.click(".add_project", (e, target)->
+    title = prompt('please input the project name', '')
+    issue_title = prompt('please input the issue title', 'add issues')
+    if title.length > 0 && issue_title.length > 0
+      project = addProject(title)
+      addIssue(project.id, issue_title)
+    else
+      alert "please input the title of project and issue."
   )
 
 renderProject = (project) ->
-  $("#projects-tab").append("""
-    <div id=\"project_#{project.id}\" class=\"project\">
-      <h1>#{project.name}#{if project.server_id then "" else "(サーバ待機中)"}</h1>
+  $("#issues").append("""
+    <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
+    <div class="span12">
+    <h1>
+      #{project.name}#{if project.server_id then "" else uploading_icon}
+    </h1>
+    <div class=\"input-append\"> 
       <input type=\"text\" class=\"input\" />
-      <input type=\"submit\" value=\"add issue\" />
-      <div class="issues"></div>
+      <input type=\"submit\" value=\"add issue\" class=\"btn\" />
+    </div>
+    </div>
+    <div style=\"clear:both;\"></div>
     </div>
   """)
 
 renderIssues = (issues=null) ->
-  issues = db.find("issues",{is_closed: false, assignee_id: 1}) unless issues
+  issues = db.find("issues",{is_closed: false, assignee_id: 1}, {order:{ins_at:"desc"}}) unless issues
   $(".issues").html("")
   for issue in issues
-    renderIssue(issue) if !issue.is_ddt
+    renderIssue(issue) if !issue.is_ddt && !issue.will_start_on
   renderCards()
   $(() ->
     $(".issue .title").click(() ->
@@ -187,32 +194,41 @@ renderIssues = (issues=null) ->
       return false
     )
     $(".card").click(() ->
-      issue_id = $(this).parent().attr("id").replace("issue_", "")
+      issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "")
       renderCards(issue_id)
       return false
     )
     $(".ddt").click(() ->
-      issue_id = $(this).parent().attr("id").replace("issue_", "")
+      issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "")
       renderDdt(issue_id)
       return false
     )
   )
 
-renderIssue = (issue) ->
+renderIssue = (issue, target="append") ->
   $project = $("#project_#{issue.project_id}")
   $project.fadeIn(200)
   title = "#{issue.title} #{issue.is_ddt}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
-  $project.append("""
-    <div id=\"issue_#{issue.id}\" class=\"issue\">
-      #{title}
-      (#{issue.will_start_on})
-      #{if issue.server_id then "" else "(サーバ待機中)"}
-      <a class=\"card\" href="#"></a>
-      <a class=\"ddt\" href="#">DDT</a>
+  html = """
+    <div id=\"issue_#{issue.id}\" class=\"issue span3\">
+      <h2>#{title}
+      #{if issue.server_id then "" else uploading_icon}
+      </h2>
+      <div class="btn-toolbar">
+      <div class="btn-group">
+      <a class=\"card btn\" href="#"></a>
+      <a class=\"ddt btn\" href="#">DDT</a>
+      <a class=\"cls btn\" href="#">close</a>
       <div class=\"body\">#{issue.body}</div>
+      </div>
+      </div>
     </div>
-  """)
+  """
+  if target == "append"
+    $project.append(html)
+  else
+    $project.prepend(html)
   $("issue_#{issue.id}").hide().fadeIn(200)
 
 renderDdt = (issue_id) ->
@@ -250,13 +266,14 @@ startWorkLog = (issue_id = null) ->
 
 addIssue = (project_id, title) ->
   issue = db.ins("issues", {title: title, project_id: project_id, body:"", assignee_id:1, user_id:1})
-  renderIssue(issue)
+  renderIssue(issue, "prepend")
 
 addProject = (name) ->
   project = db.ins("projects", {name: name})
   #renderProject(project)
   renderProjects()
   $("#project_#{project.id}").fadeIn(200)
+  return project
 
 renderWorkLogs = () ->
   $("#work_logs").html("")
@@ -274,9 +291,10 @@ renderWorkLogs = () ->
     stop = ""
     stop = "<a href=\"#\" class=\"cardw\">STOP</a>" unless work_log.end_at
     $("#work_logs").append("""
-      <div>#{issue.title} #{dispTime(work_log)}
-      #{if work_log.server_id then "" else "(サーバ待機中)"}
+      <li>#{issue.title} #{dispTime(work_log)}
+      #{if work_log.server_id then "" else uploading_icon}
       #{stop}
+      </li>
     """)
     $(".cardw").click(() ->
       issue_id = working_log.issue_id
@@ -396,6 +414,8 @@ zero = (int) ->
 
 now = () ->
   parseInt((new Date().getTime())/1000)
+
+uploading_icon = "<i class=\"icon-circle-arrow-up\"></i>"
 
 turnback = ($e) ->
   if $e.css("display") == "none"

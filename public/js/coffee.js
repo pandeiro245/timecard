@@ -41,7 +41,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, domain, fetch, getDomain, getLastFetch, getToken, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, schema, setInfo, startWorkLog, stopWorkLog, sync, token, turnback, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, domain, fetch, getDomain, getLastFetch, getToken, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, schema, setInfo, startWorkLog, stopWorkLog, sync, sync_item, token, turnback, uploading_icon, working_log, zero;
 
   working_log = null;
 
@@ -93,6 +93,7 @@
   };
 
   init = function() {
+    prepareAddProject();
     if (!domain) {
       domain = getDomain();
     }
@@ -104,8 +105,6 @@
     }
     renderProjects();
     renderIssues();
-    fetch();
-    loopFetch();
     return loopRenderWorkLogs();
   };
 
@@ -209,7 +208,7 @@
   };
 
   sync = function(table_name, data) {
-    var i, issue, item, local_id, server_id, server_ids, _i, _len, _results;
+    var i, item, local_id, server_id, server_ids, _i, _len, _results;
 
     if (table_name === "server_ids") {
       _results = [];
@@ -234,34 +233,67 @@
     } else {
       for (_i = 0, _len = data.length; _i < _len; _i++) {
         i = data[_i];
-        if (i.project_id) {
-          i.project_id = db.one("projects", {
-            server_id: i.project_id
-          }).id;
-        }
-        if (i.issue_id) {
-          issue = db.one("issues", {
-            server_id: i.issue_id
-          });
-          i.issue_id = issue.id;
-        }
-        if (i.closed_at) {
-          i.is_closed = true;
-        }
-        item = db.one(table_name, {
-          server_id: i.id
-        });
-        if (item) {
-          i.id = item.id;
-          item = i;
-          db.upd(table_name, item);
-        } else {
-          i.server_id = i.id;
-          delete i.id;
-          item = db.ins(table_name, i);
-        }
+        sync_item(table_name, i);
       }
       return debug("sync is done", data);
+    }
+  };
+
+  sync_item = function(table_name, i) {
+    var cond, issue, item, project, server_project, url;
+
+    if (i.project_id) {
+      i.project_id = db.one("projects", {
+        server_id: i.project_id
+      }).id;
+    }
+    if (i.issue_id) {
+      issue = db.one("issues", {
+        server_id: i.issue_id
+      });
+      if (issue) {
+        i.issue_id = issue.id;
+      } else {
+        url = "" + domain + "/api/v1/issues/" + i.issue_id + ".json?token=" + token;
+        $.get(url, function(item) {
+          return sync_item("issues", item);
+        });
+        i.issue_id = 0;
+      }
+    }
+    if (i.closed_at) {
+      i.is_closed = true;
+    }
+    item = db.one(table_name, {
+      server_id: i.id
+    });
+    if (item) {
+      i.id = item.id;
+      item = i;
+      db.upd(table_name, item);
+    } else {
+      i.server_id = i.id;
+      delete i.id;
+      item = db.ins(table_name, i);
+    }
+    if (i.is_github) {
+      db.ins("server_issues", {
+        server_id: 1,
+        issue_id: item.id,
+        issue_server_id: i.github_issue_id
+      });
+    }
+    if (i.github_repository_id) {
+      project = db.one("projects", {
+        id: item.project_id
+      });
+      cond = {
+        server_id: 1,
+        project_id: project.id,
+        project_server_id: i.github_repository_id
+      };
+      server_project = db.one("server_projects", cond);
+      return db.ins("server_projects", cond);
     }
   };
 
@@ -274,8 +306,7 @@
     if (!projects) {
       projects = db.find("projects");
     }
-    $("#projects-tab").html("<div id=\"new_project\"></div>");
-    $("#new_project").html("<input type=\"text\" class=\"input\" />\n<input type=\"submit\" value=\"add project\" />");
+    $("#issues").html("");
     for (_i = 0, _len = projects.length; _i < _len; _i++) {
       project = projects[_i];
       renderProject(project);
@@ -284,28 +315,34 @@
       var $project, project_id, title;
 
       title = $(target).val();
-      $project = $(target).parent();
-      if ($project.attr("id").match("project_")) {
-        project_id = $project.attr("id").replace("project_", "");
-        if (title.length > 0) {
-          addIssue(project_id, title);
-          return $(target).val("");
-        } else {
-          return alert("please input the title");
-        }
+      $project = $(target).parent().parent().parent();
+      project_id = $project.attr("id").replace("project_", "");
+      if (title.length > 0) {
+        addIssue(project_id, title);
+        return $(target).val("");
       } else {
-        if (title.length > 0) {
-          addProject(title);
-          return $(target).val("");
-        } else {
-          return alert("please input the title");
-        }
+        return alert("please input the title");
+      }
+    });
+  };
+
+  prepareAddProject = function() {
+    return hl.click(".add_project", function(e, target) {
+      var issue_title, project, title;
+
+      title = prompt('please input the project name', '');
+      issue_title = prompt('please input the issue title', 'add issues');
+      if (title.length > 0 && issue_title.length > 0) {
+        project = addProject(title);
+        return addIssue(project.id, issue_title);
+      } else {
+        return alert("please input the title of project and issue.");
       }
     });
   };
 
   renderProject = function(project) {
-    return $("#projects-tab").append("<div id=\"project_" + project.id + "\" class=\"project\">\n  <h1>" + project.name + (project.server_id ? "" : "(サーバ待機中)") + "</h1>\n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" />\n  <div class=\"issues\"></div>\n</div>");
+    return $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uploading_icon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div style=\"clear:both;\"></div>\n</div>");
   };
 
   renderIssues = function(issues) {
@@ -318,12 +355,16 @@
       issues = db.find("issues", {
         is_closed: false,
         assignee_id: 1
+      }, {
+        order: {
+          ins_at: "desc"
+        }
       });
     }
     $(".issues").html("");
     for (_i = 0, _len = issues.length; _i < _len; _i++) {
       issue = issues[_i];
-      if (!issue.is_ddt) {
+      if (!issue.is_ddt && !issue.will_start_on) {
         renderIssue(issue);
       }
     }
@@ -339,30 +380,38 @@
       $(".card").click(function() {
         var issue_id;
 
-        issue_id = $(this).parent().attr("id").replace("issue_", "");
+        issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "");
         renderCards(issue_id);
         return false;
       });
       return $(".ddt").click(function() {
         var issue_id;
 
-        issue_id = $(this).parent().attr("id").replace("issue_", "");
+        issue_id = $(this).parent().parent().parent().attr("id").replace("issue_", "");
         renderDdt(issue_id);
         return false;
       });
     });
   };
 
-  renderIssue = function(issue) {
-    var $project, title;
+  renderIssue = function(issue, target) {
+    var $project, html, title;
 
+    if (target == null) {
+      target = "append";
+    }
     $project = $("#project_" + issue.project_id);
     $project.fadeIn(200);
     title = "" + issue.title + " " + issue.is_ddt;
     if (issue.body && issue.body.length > 0) {
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
-    $project.append("<div id=\"issue_" + issue.id + "\" class=\"issue\">\n  " + title + " \n  " + (issue.server_id ? "" : "(サーバ待機中)") + "\n  <a class=\"card\" href=\"#\"></a>\n  <a class=\"ddt\" href=\"#\">DDT</a>\n  <div class=\"body\">" + issue.body + "</div>\n</div>");
+    html = "<div id=\"issue_" + issue.id + "\" class=\"issue span3\">\n  <h2>" + title + "\n  " + (issue.server_id ? "" : uploading_icon) + "\n  </h2>\n  <div class=\"btn-toolbar\">\n  <div class=\"btn-group\">\n  <a class=\"card btn\" href=\"#\"></a>\n  <a class=\"ddt btn\" href=\"#\">DDT</a>\n  <a class=\"cls btn\" href=\"#\">close</a>\n  <div class=\"body\">" + issue.body + "</div>\n  </div>\n  </div>\n</div>";
+    if (target === "append") {
+      $project.append(html);
+    } else {
+      $project.prepend(html);
+    }
     return $("issue_" + issue.id).hide().fadeIn(200);
   };
 
@@ -431,7 +480,7 @@
       assignee_id: 1,
       user_id: 1
     });
-    return renderIssue(issue);
+    return renderIssue(issue, "prepend");
   };
 
   addProject = function(name) {
@@ -441,7 +490,8 @@
       name: name
     });
     renderProjects();
-    return $("#project_" + project.id).fadeIn(200);
+    $("#project_" + project.id).fadeIn(200);
+    return project;
   };
 
   renderWorkLogs = function() {
@@ -459,27 +509,24 @@
       work_log = _ref[_i];
       if (!work_log.issue_id) {
         url = "" + domain + "/api/v1/work_logs/" + work_log.server_id + ".json?token=" + token;
-        $.get(url, function(data) {
-          var issue;
-
-          issue = db.one("issues", {
-            server_id: data.id
-          });
-          work_log.issue_id = issue.id;
-          return db.upd("work_logs", work_log);
+        $.get(url, function(item) {
+          return sync_item("work_logs", item);
         });
       }
-      issue = db.one("issues", {
-        id: work_log.issue_id
-      });
-      if (!issue.title) {
-        console.log(issue);
+      if (work_log.issue_id !== 0) {
+        issue = db.one("issues", {
+          id: work_log.issue_id
+        });
+      } else {
+        issue = {
+          title: "issue名取得中"
+        };
       }
       stop = "";
       if (!work_log.end_at) {
         stop = "<a href=\"#\" class=\"cardw\">STOP</a>";
       }
-      $("#work_logs").append("<div>" + issue.title + " " + (dispTime(work_log)) + "\n" + (work_log.server_id ? "" : "(サーバ待機中)"));
+      $("#work_logs").append("<li>" + issue.title + " " + (dispTime(work_log)) + "\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
       $(".cardw").click(function() {
         var issue_id;
 
@@ -552,6 +599,10 @@
   };
 
   schema = {
+    servers: {
+      domain: "",
+      $uniques: "domain"
+    },
     users: {
       server_id: 0,
       name: ""
@@ -569,7 +620,8 @@
       is_ddt: "off",
       is_closed: "off",
       user_id: 0,
-      assignee_id: 0
+      assignee_id: 0,
+      will_start_on: ""
     },
     work_logs: {
       issue_id: 0,
@@ -586,6 +638,16 @@
       key: "",
       val: "",
       $uniques: "key"
+    },
+    server_projects: {
+      server_id: 0,
+      project_id: 0,
+      project_server_id: 0
+    },
+    server_issues: {
+      server_id: 0,
+      issue_id: 0,
+      issue_server_id: 0
     }
   };
 
@@ -607,6 +669,8 @@
   now = function() {
     return parseInt((new Date().getTime()) / 1000);
   };
+
+  uploading_icon = "<i class=\"icon-circle-arrow-up\"></i>";
 
   turnback = function($e) {
     if ($e.css("display") === "none") {

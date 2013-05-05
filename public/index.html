@@ -5,23 +5,72 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>mindia</title>
+<link href="./css/bootstrap.min.css"rel="stylesheet" type="text/css" />
+<link href="./css/bootstrap-responsive.min.css"rel="stylesheet" type="text/css" />
 <link href="./css/main.css"rel="stylesheet" type="text/css" />
 <script src="./js/jquery.js"></script>
 <script src="./js/jquery-ui.js"></script>
+<script src="./js/bootstrap.min.js"></script>
 <script src="./js/SortedList.js"></script>
 <script src="./js/jsrel.js"></script>
 <script src="./js/coffee.js"></script>
 </head>
 <body>
-<table>
-<tr>
-<td valign="top">
-<div id="projects-tab"></div>
-</td>
-<td valign="top">
-<div id="work_logs"></div>
-</td>
-</tr>
-</table>
+<div class="navbar navbar-inverse navbar-fixed-top">
+  <div class="navbar-inner">
+    <div class="container-fluid">
+      <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="brand" href="#">Timecard</a>
+      <div class="nav-collapse collapse">
+        <p class="navbar-text pull-right">
+          Logged in as <a href="#" class="navbar-link">Username</a>
+        </p>
+        <ul class="nav">
+          <li class="active"><a href="#">Home</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div><!--/.nav-collapse -->
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row-fluid">
+    <div class="span3">
+      <div class="well sidebar-nav"> 
+        <ul class="nav nav-list" id="new_project">
+          <li>
+            <button class="btn add_project" type="button">add project</button>
+          </li>
+        </ul>
+      </div>
+      <div class="well sidebar-nav">
+        <ul class="nav nav-list" id="work_logs">
+        </ul>
+      </div><!--/.well -->
+    </div><!--/span-->
+    <div class="span9">
+      <div class="hero-unit">
+        <h1>enjoy working!</h1>
+        <p>working is fun.</p>
+      </div>
+      <div class="row-fluid" id="issues">
+      </div><!--/row-->
+    </div><!--/span-->
+  </div><!--/row-->
+
+  <hr>
+
+  <footer>
+    <p>&copy; Company 2013</p>
+  </footer>
+
+</div><!--/.fluid-container-->
+
 </body>
 </html>

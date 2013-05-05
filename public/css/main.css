@@ -1,3 +1,7 @@
+body{
+  padding-top: 70px;
+}
+
 .project, .issue .body{
   display: none;
 }
@@ -5,4 +9,15 @@
 .card, .cardw, .ddt,{
   border: 1px solid #ccc;
   padding: 4px;
+}
+
+.project h1{
+  font-size: 18px;
+  padding-bottom: 0px;
+  border-bottom: 1px solid #ccc;
+}
+
+.issue h2{
+  font-size:16px;
+  line-height:1.3;
 }
