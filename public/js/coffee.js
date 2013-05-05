@@ -51,8 +51,8 @@
     renderProjects();
     renderIssues();
     renderWorkLogs();
-    loopFetch();
-    return loopRenderWorkLogs();
+    loopRenderWorkLogs();
+    return loopFetch();
   };
 
   fetch = function(server) {
@@ -282,7 +282,7 @@
   };
 
   renderProject = function(project) {
-    return $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uploading_icon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div style=\"clear:both;\"></div>\n</div>");
+    return $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uploading_icon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div class=\"issues\"></div>\n</div>");
   };
 
   renderIssues = function(issues) {
@@ -332,12 +332,13 @@
   };
 
   renderIssue = function(issue, target) {
-    var $project, icon, start_or_end, title;
+    var $project, $project_issues, icon, start_or_end, title;
 
     if (target == null) {
       target = "append";
     }
     $project = $("#project_" + issue.project_id);
+    $project_issues = $("#project_" + issue.project_id + " .issues");
     $project.fadeIn(200);
     title = "" + issue.title;
     if (issue.body && issue.body.length > 0) {
@@ -356,9 +357,9 @@
       }
     }).next(function(html) {
       if (target === "append") {
-        $project.append(html);
+        $project_issues.append(html);
       } else {
-        $project.prepend(html);
+        $project_issues.prepend(html);
       }
       $("issue_" + issue.id).hide().fadeIn(200);
       return prepareCards(issue.id);

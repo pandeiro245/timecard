@@ -7,7 +7,7 @@ init = () ->
   renderIssues()
   renderWorkLogs()
   loopRenderWorkLogs()
-  #loopFetch()
+  loopFetch()
 
 fetch = (server) ->
   domain = server.domain
@@ -158,7 +158,7 @@ prepareAddProject = () ->
 renderProject = (project) ->
   $("#issues").append("""
     <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
-    <div class="span12">
+    <div class=\"span12\">
     <h1>
       #{project.name}#{if project.server_id then "" else uploading_icon}
     </h1>
@@ -167,7 +167,7 @@ renderProject = (project) ->
       <input type=\"submit\" value=\"add issue\" class=\"btn\" />
     </div>
     </div>
-    <div style=\"clear:both;\"></div>
+    <div class=\"issues\"></div>
     </div>
   """)
 
@@ -197,6 +197,7 @@ prepareCards = (issue_id) ->
 
 renderIssue = (issue, target="append") ->
   $project = $("#project_#{issue.project_id}")
+  $project_issues = $("#project_#{issue.project_id} .issues")
   $project.fadeIn(200)
   title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
@@ -210,9 +211,9 @@ renderIssue = (issue, target="append") ->
     start_or_end: start_or_end
   }}).next((html) ->
     if target == "append"
-      $project.append(html)
+      $project_issues.append(html)
     else
-      $project.prepend(html)
+      $project_issues.prepend(html)
     $("issue_#{issue.id}").hide().fadeIn(200)
     prepareCards(issue.id)
 
