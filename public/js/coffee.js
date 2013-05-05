@@ -41,122 +41,41 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, domain, fetch, getDomain, getLastFetch, getToken, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, schema, setInfo, startWorkLog, stopWorkLog, sync, sync_item, token, turnback, uploading_icon, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, domain, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, pushIfHasIssue, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, schema, setInfo, startWorkLog, stopWorkLog, sync, sync_item, token, turnback, uploading_icon, working_log, zero;
 
   working_log = null;
 
-  domain = null;
-
-  token = null;
-
-  last_fetch = null;
-
-  getLastFetch = function() {
-    var info;
-
-    info = db.one("infos", {
-      key: "last_fetch"
-    });
-    if (info) {
-      return info.val;
-    } else {
-      return 0;
-    }
-  };
-
-  getDomain = function() {
-    var info, val;
-
-    info = db.one("infos", {
-      key: "domain"
-    });
-    if (!info || info.val.length < 10) {
-      val = prompt('please input the domain', 'http://crowdsourcing.dev');
-      info = setInfo("domain", val);
-    }
-    return info.val;
-  };
-
-  getToken = function() {
-    var info, val;
-
-    info = db.one("infos", {
-      key: "token"
-    });
-    if (location.hash && location.hash.length > 10) {
-      val = location.hash.replace(/#/, "");
-      info = setInfo("token", val);
-    } else if (!info || info.val.length < 10) {
-      location.href = "" + domain + "/token?url=" + location.href;
-    }
-    return info.val;
-  };
-
   init = function() {
     prepareAddProject();
-    if (!domain) {
-      domain = getDomain();
-    }
-    if (!token) {
-      token = getToken();
-    }
-    if (!last_fetch) {
-      last_fetch = getLastFetch();
-    }
+    domain();
+    token();
     renderProjects();
     renderIssues();
+    fetch();
+    loopFetch();
     return loopRenderWorkLogs();
   };
 
   fetch = function() {
-    var diffs, has_issue, issue, issues, params, project, projects, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
+    var diffs, issue, issues, params, project, projects, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
 
     projects = [];
     issues = [];
     work_logs = [];
-    _ref = db.find("projects", {
-      server_id: null
-    });
+    _ref = findWillUploads("projects");
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       project = _ref[_i];
-      has_issue = db.one("issues", {
-        project_id: project.id
-      });
-      if (has_issue) {
-        project.local_id = project.id;
-        delete project.id;
-        projects.push(project);
-      }
+      projects = pushIfHasIssue(project, projects);
     }
-    _ref1 = db.find("issues", {
-      server_id: null
-    });
+    _ref1 = findWillUploads("issues");
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       issue = _ref1[_j];
-      project = db.one("projects", {
-        id: issue.project_id
-      });
-      if (project.server_id) {
-        issue.project_server_id = project.server_id;
-      }
-      issue.local_id = issue.id;
-      delete issue.id;
-      issues.push(issue);
+      issues.push(forUploadIssue(issue));
     }
-    _ref2 = db.find("work_logs", {
-      server_id: null
-    });
+    _ref2 = findWillUploads("work_logs");
     for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
       work_log = _ref2[_k];
-      issue = db.one("issues", {
-        id: work_log.issue_id
-      });
-      if (issue.server_id) {
-        work_log.issue_server_id = issue.server_id;
-      }
-      work_log.local_id = work_log.id;
-      delete work_log.id;
-      work_logs.push(work_log);
+      work_logs.push(forUploadWorkLog(work_log));
     }
     diffs = {
       projects: projects,
@@ -178,14 +97,14 @@
       }
     }
     params = {
-      token: token,
-      last_fetch: last_fetch,
+      token: token(),
+      last_fetch: last_fetch(),
       diffs: diffs,
       working_logs: working_logs
     };
     debug("diffs", diffs);
     debug("fetch at", now());
-    url = "" + domain + "/api/v1/diffs.json";
+    url = "" + (domain()) + "/api/v1/diffs.json";
     return $.post(url, params, function(data) {
       debug("fetch callback", data);
       wlsis = db.one("infos", {
@@ -202,8 +121,7 @@
       sync("projects", data.projects);
       sync("issues", data.issues);
       sync("work_logs", data.work_logs);
-      last_fetch = now();
-      return setInfo("last_fetch", last_fetch);
+      return last_fetch(now());
     });
   };
 
@@ -254,7 +172,7 @@
       if (issue) {
         i.issue_id = issue.id;
       } else {
-        url = "" + domain + "/api/v1/issues/" + i.issue_id + ".json?token=" + token;
+        url = "" + (domain()) + "/api/v1/issues/" + i.issue_id + ".json?token=" + (token());
         $.get(url, function(item) {
           return sync_item("issues", item);
         });
@@ -489,7 +407,7 @@
     project = db.ins("projects", {
       name: name
     });
-    renderProjects();
+    renderProject(project);
     $("#project_" + project.id).fadeIn(200);
     return project;
   };
@@ -508,7 +426,7 @@
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       work_log = _ref[_i];
       if (!work_log.issue_id) {
-        url = "" + domain + "/api/v1/work_logs/" + work_log.server_id + ".json?token=" + token;
+        url = "" + (domain()) + "/api/v1/work_logs/" + work_log.server_id + ".json?token=" + (token());
         $.get(url, function(item) {
           return sync_item("work_logs", item);
         });
@@ -526,7 +444,7 @@
       if (!work_log.end_at) {
         stop = "<a href=\"#\" class=\"cardw\">STOP</a>";
       }
-      $("#work_logs").append("<li>" + issue.title + " " + (dispTime(work_log)) + "\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
+      $("#work_logs").append("<li class=\"active\">" + issue.title + " " + (dispTime(work_log)) + "\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
       $(".cardw").click(function() {
         var issue_id;
 
@@ -550,12 +468,59 @@
   };
 
   loopFetch = function() {
-    if (last_fetch > 0) {
+    if (last_fetch() > 0) {
       fetch();
       return setTimeout(function() {
         return loopFetch();
       }, 1000 * 10);
     }
+  };
+
+  last_fetch = function(sec) {
+    var info;
+
+    if (sec == null) {
+      sec = null;
+    }
+    if (sec) {
+      setInfo("last_fetch", sec);
+    }
+    info = db.one("infos", {
+      key: "last_fetch"
+    });
+    if (info) {
+      return info.val;
+    } else {
+      return 0;
+    }
+  };
+
+  domain = function() {
+    var info, val;
+
+    info = db.one("infos", {
+      key: "domain"
+    });
+    if (!info || info.val.length < 10) {
+      val = prompt('please input the domain', 'http://crowdsourcing.dev');
+      info = setInfo("domain", val);
+    }
+    return info.val;
+  };
+
+  token = function() {
+    var info, val;
+
+    info = db.one("infos", {
+      key: "token"
+    });
+    if (location.hash && location.hash.length > 10) {
+      val = location.hash.replace(/#/, "");
+      info = setInfo("token", val);
+    } else if (!info || info.val.length < 10) {
+      location.href = "" + domain + "/token?url=" + location.href;
+    }
+    return info.val;
   };
 
   dispTime = function(work_log) {
@@ -678,6 +643,59 @@
     } else {
       return $e.fadeOut(400);
     }
+  };
+
+  findWillUploads = function(table_name) {
+    return db.find(table_name, {
+      server_id: null
+    });
+  };
+
+  pushIfHasIssue = function(project, projects) {
+    if (db.one("issues", {
+      project_id: project.id
+    })) {
+      project.local_id = project.id;
+      delete project.id;
+      projects.push(project);
+    }
+    return projects;
+  };
+
+  findProjectByIssue = function(issue) {
+    return db.one("projects", {
+      id: issue.project_id
+    });
+  };
+
+  findIssueByWorkLog = function(work_log) {
+    return db.one("issues", {
+      id: work_log.issue_id
+    });
+  };
+
+  forUploadIssue = function(issue) {
+    var project;
+
+    project = findProjectByIssue(issue);
+    if (project.server_id) {
+      issue.project_server_id = project.server_id;
+    }
+    issue.local_id = issue.id;
+    delete issue.id;
+    return issue;
+  };
+
+  forUploadWorkLog = function(work_log) {
+    var issue;
+
+    issue = findIssueByWorkLog(work_log);
+    if (issue.server_id) {
+      work_log.issue_server_id = issue.server_id;
+    }
+    work_log.local_id = work_log.id;
+    delete work_log.id;
+    return work_log;
   };
 
   debug = function(title, data) {

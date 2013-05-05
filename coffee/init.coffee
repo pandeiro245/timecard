@@ -1,68 +1,30 @@
 working_log = null
-domain = null
-token = null
-last_fetch = null
-
-getLastFetch = () ->
-  info = db.one("infos", {key: "last_fetch"})
-  if info then info.val else 0
-
-getDomain = () ->
-  info = db.one("infos", {key: "domain"})
-  if !info or info.val.length < 10
-    val = prompt('please input the domain', 'http://crowdsourcing.dev')
-    info = setInfo("domain", val)
-  return info.val
-
-getToken = () ->
-  info = db.one("infos", {key: "token"})
-  if location.hash && location.hash.length > 10
-    val = location.hash.replace(/#/,"")
-    info = setInfo("token",val)
-  else if !info or  info.val.length < 10
-    location.href = "#{domain}/token?url=#{location.href}"
-  return info.val
 
 init = () ->
   prepareAddProject()
-  domain = getDomain() unless domain
-  token = getToken() unless token
-  last_fetch = getLastFetch() unless last_fetch
+  domain()
+  token()
   renderProjects()
   renderIssues()
-  #fetch()
-  #loopFetch()
+  fetch()
+  loopFetch()
   loopRenderWorkLogs()
 
 fetch = () ->
   projects = []
   issues = []
   work_logs = []
-  for project in db.find("projects", {server_id: null})
-    has_issue = db.one("issues", {project_id: project.id})
-    if has_issue
-      project.local_id = project.id
-      delete project.id
-      projects.push(project) 
-  for issue in db.find("issues", {server_id: null})
-    project = db.one("projects", {id: issue.project_id})
-    issue.project_server_id = project.server_id if project.server_id
-    issue.local_id = issue.id
-    delete issue.id
-    issues.push(issue)
-  for work_log in db.find("work_logs", {server_id: null})
-    issue = db.one("issues", {id: work_log.issue_id})
-    work_log.issue_server_id = issue.server_id if issue.server_id
-    work_log.local_id = work_log.id
-    delete work_log.id
-    work_logs.push(work_log)
-
+  for project in findWillUploads("projects")
+    projects = pushIfHasIssue(project, projects)
+  for issue in findWillUploads("issues")
+    issues.push(forUploadIssue(issue))
+  for work_log in findWillUploads("work_logs")
+    work_logs.push(forUploadWorkLog(work_log))
   diffs =  {
     projects: projects,
     issues: issues,
     work_logs: work_logs
   }
-
   working_logs = []
   wlsis = db.one("infos", {key: "working_log_server_ids"})
   if wlsis
@@ -71,15 +33,15 @@ fetch = () ->
       working_logs.push(db.one("work_logs", {server_id: parseInt(working_log_server_id)}))
 
   params = {
-    token: token,
-    last_fetch: last_fetch,
+    token: token(),
+    last_fetch: last_fetch(),
     diffs: diffs,
     working_logs: working_logs
   }
 
   debug "diffs", diffs
   debug "fetch at", now()
-  url = "#{domain}/api/v1/diffs.json"
+  url = "#{domain()}/api/v1/diffs.json"
   $.post(url, params, (data) ->
     debug "fetch callback", data
     wlsis = db.one("infos", {key: "working_log_server_ids"})
@@ -90,8 +52,7 @@ fetch = () ->
     sync("projects", data.projects)
     sync("issues", data.issues)
     sync("work_logs", data.work_logs)
-    last_fetch = now()
-    setInfo("last_fetch", last_fetch)
+    last_fetch(now())
   )
 
 sync = (table_name, data) ->
@@ -114,7 +75,7 @@ sync_item = (table_name, i) ->
     if issue
       i.issue_id = issue.id
     else
-      url = "#{domain}/api/v1/issues/#{i.issue_id}.json?token=#{token}"
+      url = "#{domain()}/api/v1/issues/#{i.issue_id}.json?token=#{token()}"
       $.get(url, (item) ->
         sync_item("issues", item)
       )
@@ -270,8 +231,7 @@ addIssue = (project_id, title) ->
 
 addProject = (name) ->
   project = db.ins("projects", {name: name})
-  #renderProject(project)
-  renderProjects()
+  renderProject(project)
   $("#project_#{project.id}").fadeIn(200)
   return project
 
@@ -280,7 +240,7 @@ renderWorkLogs = () ->
   title = "crowdsourciing"
   for work_log in db.find("work_logs", null, {order: {started_at: "desc"}, limit: 20})
     if !work_log.issue_id
-      url = "#{domain}/api/v1/work_logs/#{work_log.server_id}.json?token=#{token}"
+      url = "#{domain()}/api/v1/work_logs/#{work_log.server_id}.json?token=#{token()}"
       $.get(url, (item) ->
         sync_item("work_logs", item)
       )
@@ -291,7 +251,7 @@ renderWorkLogs = () ->
     stop = ""
     stop = "<a href=\"#\" class=\"cardw\">STOP</a>" unless work_log.end_at
     $("#work_logs").append("""
-      <li>#{issue.title} #{dispTime(work_log)}
+      <li class="active">#{issue.title} #{dispTime(work_log)}
       #{if work_log.server_id then "" else uploading_icon}
       #{stop}
       </li>
@@ -313,11 +273,32 @@ loopRenderWorkLogs = () ->
   ,1000)
 
 loopFetch = () ->
-  if last_fetch > 0
+  if last_fetch() > 0
     fetch()
     setTimeout(()->
       loopFetch()
     ,1000*10)
+
+last_fetch = (sec = null) ->
+  setInfo("last_fetch", sec) if sec
+  info = db.one("infos", {key: "last_fetch"})
+  if info then info.val else 0
+
+domain = () ->
+  info = db.one("infos", {key: "domain"})
+  if !info or info.val.length < 10
+    val = prompt('please input the domain', 'http://crowdsourcing.dev')
+    info = setInfo("domain", val)
+  return info.val
+
+token = () ->
+  info = db.one("infos", {key: "token"})
+  if location.hash && location.hash.length > 10
+    val = location.hash.replace(/#/,"")
+    info = setInfo("token",val)
+  else if !info or  info.val.length < 10
+    location.href = "#{domain}/token?url=#{location.href}"
+  return info.val
 
 dispTime = (work_log) ->
   msec = 0
@@ -418,10 +399,39 @@ now = () ->
 uploading_icon = "<i class=\"icon-circle-arrow-up\"></i>"
 
 turnback = ($e) ->
-  if $e.css("display") == "none"
-    $e.fadeIn(400)
-  else
-    $e.fadeOut(400)
+  if $e.css("display") == "none" then $e.fadeIn(400) else  $e.fadeOut(400)
+
+findWillUploads = (table_name) ->
+  db.find(table_name, {server_id: null})
+
+pushIfHasIssue = (project, projects) ->
+  if db.one("issues", {project_id: project.id})
+    project.local_id = project.id
+    delete project.id
+    projects.push(project)
+  projects
+
+findProjectByIssue = (issue) ->
+  db.one("projects", {id: issue.project_id})
+
+findIssueByWorkLog = (work_log) ->
+  db.one("issues", {id: work_log.issue_id})
+
+forUploadIssue = (issue) ->
+  project = findProjectByIssue(issue)
+  if project.server_id
+    issue.project_server_id = project.server_id
+  issue.local_id = issue.id
+  delete issue.id
+  return issue
+
+forUploadWorkLog = (work_log) ->
+  issue = findIssueByWorkLog(work_log)
+  if issue.server_id
+    work_log.issue_server_id = issue.server_id
+  work_log.local_id = work_log.id
+  delete work_log.id
+  return work_log
 
 debug = (title, data) ->
   console.log title
