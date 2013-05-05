@@ -102,23 +102,40 @@ sync = (table_name, data) ->
         db.upd(table_name, item)
   else
     for i in data
-      if i.project_id
-        i.project_id = db.one("projects", {server_id: i.project_id}).id
-      if i.issue_id
-        issue = db.one("issues", {server_id: i.issue_id})
-        i.issue_id = issue.id
-      if i.closed_at
-        i.is_closed = true
-      item = db.one(table_name, {server_id: i.id})
-      if item
-        i.id = item.id
-        item = i
-        db.upd(table_name, item)
-      else
-        i.server_id = i.id
-        delete i.id
-        item = db.ins(table_name, i)
+      sync_item(table_name, i)
     debug "sync is done", data
+
+sync_item = (table_name, i) ->
+  if i.project_id
+    i.project_id = db.one("projects", {server_id: i.project_id}).id
+  if i.issue_id
+    issue = db.one("issues", {server_id: i.issue_id})
+    if issue
+      i.issue_id = issue.id
+    else
+      url = "#{domain}/api/v1/issues/#{i.issue_id}.json?token=#{token}"
+      $.get(url, (item) ->
+        sync_item("issues", item)
+      )
+      i.issue_id = 0
+  if i.closed_at
+    i.is_closed = true
+  item = db.one(table_name, {server_id: i.id})
+  if item
+    i.id = item.id
+    item = i
+    db.upd(table_name, item)
+  else
+    i.server_id = i.id
+    delete i.id
+    item = db.ins(table_name, i)
+  if i.is_github
+    db.ins("server_issues", {server_id: 1, issue_id: item.id, issue_server_id: i.github_issue_id})
+  if i.github_repository_id
+    project = db.one("projects", {id: item.project_id})
+    cond = {server_id: 1, project_id: project.id, project_server_id: i.github_repository_id }
+    server_project = db.one("server_projects", cond)
+    db.ins("server_projects", cond)
 
 renderProjects = (projects=null) ->
   projects = db.find("projects") unless projects
@@ -188,7 +205,8 @@ renderIssue = (issue) ->
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
   $project.append("""
     <div id=\"issue_#{issue.id}\" class=\"issue\">
-      #{title} 
+      #{title}
+      (#{issue.will_start_on})
       #{if issue.server_id then "" else "(サーバ待機中)"}
       <a class=\"card\" href="#"></a>
       <a class=\"ddt\" href="#">DDT</a>
@@ -246,18 +264,19 @@ renderWorkLogs = () ->
   for work_log in db.find("work_logs", null, {order: {started_at: "desc"}, limit: 20})
     if !work_log.issue_id
       url = "#{domain}/api/v1/work_logs/#{work_log.server_id}.json?token=#{token}"
-      $.get(url, (data) ->
-        issue = db.one("issues", {server_id: data.id})
-        work_log.issue_id = issue.id
-        db.upd("work_logs", work_log)
+      $.get(url, (item) ->
+        sync_item("work_logs", item)
       )
-    issue = db.one("issues", {id: work_log.issue_id})
-    console.log issue if !issue.title
+    if work_log.issue_id != 0
+      issue = db.one("issues", {id: work_log.issue_id})
+    else
+      issue = {title: "issue名取得中"}
     stop = ""
     stop = "<a href=\"#\" class=\"cardw\">STOP</a>" unless work_log.end_at
     $("#work_logs").append("""
       <div>#{issue.title} #{dispTime(work_log)}
       #{if work_log.server_id then "" else "(サーバ待機中)"}
+      #{stop}
     """)
     $(".cardw").click(() ->
       issue_id = working_log.issue_id
@@ -309,6 +328,10 @@ setInfo = (key, val) ->
   info
 
 schema = {
+  servers: {
+    domain: "",
+    $uniques: "domain",
+  }
   users: {
     server_id:0,
     name: ""
@@ -329,6 +352,7 @@ schema = {
     is_closed: "off",
     user_id: 0,
     assignee_id: 0,
+    will_start_on: "",
     #$uniques: "server_id"
   },
   work_logs: {
@@ -342,12 +366,22 @@ schema = {
     issue_id: 0,
     user_id: 0,
     body: "",
-  }
+  },
   infos: {
     key: "",
     val: "",
     $uniques: "key"
-  }
+  },
+  server_projects:{
+    server_id: 0,
+    project_id: 0,
+    project_server_id: 0
+  },
+  server_issues:{
+    server_id: 0,
+    issue_id: 0,
+    issue_server_id: 0,
+  },
 }
 
 db = JSRel.use("crowdsourcing", {
