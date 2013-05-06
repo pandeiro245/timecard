@@ -29,7 +29,7 @@ fetch = (server) ->
   }
   working_logs = []
   wlsis = db.one("infos", {key: "working_log_server_ids"})
-  if wlsis
+  if wlsis and wlsis.val
     for working_log_server_id in wlsis.val.split(",")
       working_logs.push(db.one("work_logs", {server_id: parseInt(working_log_server_id)}))
 
@@ -45,8 +45,9 @@ fetch = (server) ->
   url = "#{domain}/api/v1/diffs.json"
   $.post(url, params, (data) ->
     wlsis = db.one("infos", {key: "working_log_server_ids"})
-    wlsis = db.ins("infos", {key: "working_log_server_ids",}) unless wlsis
-    wlsis.val = data.working_log_server_ids.join(",")
+    wlsis = db.ins("infos", {key: "working_log_server_ids"}) unless wlsis
+    if data.working_log_server_ids
+      wlsis.val = data.working_log_server_ids.join(",")
     db.upd("infos", wlsis)
     sync(server, "server_ids", data.server_ids)
     sync(server, "projects", data.projects)
@@ -109,22 +110,20 @@ renderProjects = () ->
   )
 
 prepareNodeServer = () ->
-  unless db.one("servers", {domain: "local"})
-    dbtype = "local"
-    url = "/api/users.json"
-    console.log "aaaiii"
-    $.get(url, (data) ->
-      console.log data
-      console.log "aaa"
-      server = db.ins("servers", {
-        domain: domain,
-        user_id: data.id,
-        has_connect: true,
-        dbtype: dbtype
-      })
-      "kekeke"
-      console.log server
-    )
+    if location.href.match("local") and !db.one("servers", {domain: ""}) 
+      console.log location.href
+      dbtype = "local"
+      url = "/api/users.json"
+      $.get(url, (data) ->
+        console.log data
+        console.log "aaa"
+        server = db.ins("servers", {
+          domain: "",
+          user_id: data.id,
+          has_connect: true,
+          dbtype: dbtype
+        })
+      )
 
 prepareAddServer = () ->
   hl.click(".add_server", (e, target)->

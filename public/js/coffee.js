@@ -88,7 +88,7 @@
     wlsis = db.one("infos", {
       key: "working_log_server_ids"
     });
-    if (wlsis) {
+    if (wlsis && wlsis.val) {
       _ref3 = wlsis.val.split(",");
       for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
         working_log_server_id = _ref3[_l];
@@ -115,7 +115,9 @@
           key: "working_log_server_ids"
         });
       }
-      wlsis.val = data.working_log_server_ids.join(",");
+      if (data.working_log_server_ids) {
+        wlsis.val = data.working_log_server_ids.join(",");
+      }
       db.upd("infos", wlsis);
       sync(server, "server_ids", data.server_ids);
       sync(server, "projects", data.projects);
@@ -229,25 +231,23 @@
   prepareNodeServer = function() {
     var dbtype, url;
 
-    if (!db.one("servers", {
-      domain: "local"
+    if (location.href.match("local") && !db.one("servers", {
+      domain: ""
     })) {
+      console.log(location.href);
       dbtype = "local";
       url = "/api/users.json";
-      console.log("aaaiii");
       return $.get(url, function(data) {
         var server;
 
         console.log(data);
         console.log("aaa");
-        server = db.ins("servers", {
-          domain: domain,
+        return server = db.ins("servers", {
+          domain: "",
           user_id: data.id,
           has_connect: true,
           dbtype: dbtype
         });
-        "kekeke";
-        return console.log(server);
       });
     }
   };

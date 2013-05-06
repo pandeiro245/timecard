@@ -5,11 +5,12 @@ module.exports = function(grunt){
         compile: {
             files: {
                 'public/js/coffee.js': ['coffee/*.coffee'],
+                'app.js': ['app.coffee'],
             }
         },
     },
     watch: {
-        files: ['coffee/*.coffee'],
+        files: ['coffee/*.coffee', "app.coffee"],
         tasks: 'coffee'
     }
   });
