@@ -41,11 +41,12 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
 
   working_log = null;
 
   init = function() {
+    prepareNodeServer();
     prepareAddServer();
     prepareAddProject();
     renderProjects();
@@ -225,11 +226,37 @@
     });
   };
 
+  prepareNodeServer = function() {
+    var dbtype, url;
+
+    if (!db.one("servers", {
+      domain: "local"
+    })) {
+      dbtype = "local";
+      url = "/api/users.json";
+      console.log("aaaiii");
+      return $.get(url, function(data) {
+        var server;
+
+        console.log(data);
+        console.log("aaa");
+        server = db.ins("servers", {
+          domain: domain,
+          user_id: data.id,
+          has_connect: true,
+          dbtype: dbtype
+        });
+        "kekeke";
+        return console.log(server);
+      });
+    }
+  };
+
   prepareAddServer = function() {
     return hl.click(".add_server", function(e, target) {
       var dbtype, domain, token, url;
 
-      domain = prompt('please input the domain', 'http://crowdsourcing.dev');
+      domain = prompt('please input domain', 'http://crowdsourcing.dev');
       if (domain.match("crowdsourcing") || domain.match("cs.mindia.jp")) {
         dbtype = "cs";
         token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c');

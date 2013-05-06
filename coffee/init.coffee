@@ -1,6 +1,7 @@
 working_log = null
 
 init = () ->
+  prepareNodeServer()
   prepareAddServer()
   prepareAddProject()
   renderProjects()
@@ -107,10 +108,27 @@ renderProjects = () ->
       alert "please input the title"
   )
 
+prepareNodeServer = () ->
+  unless db.one("servers", {domain: "local"})
+    dbtype = "local"
+    url = "/api/users.json"
+    console.log "aaaiii"
+    $.get(url, (data) ->
+      console.log data
+      console.log "aaa"
+      server = db.ins("servers", {
+        domain: domain,
+        user_id: data.id,
+        has_connect: true,
+        dbtype: dbtype
+      })
+      "kekeke"
+      console.log server
+    )
+
 prepareAddServer = () ->
   hl.click(".add_server", (e, target)->
-    #domain = prompt('please input the domain', 'http://redmine.dev/')
-    domain = prompt('please input the domain', 'http://crowdsourcing.dev')
+    domain = prompt('please input domain', 'http://crowdsourcing.dev')
     if domain.match("crowdsourcing") or domain.match("cs.mindia.jp")
       dbtype = "cs"
       token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c')
