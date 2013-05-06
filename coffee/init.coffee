@@ -79,7 +79,7 @@ sync_item = (server, table_name, i) ->
         sync_item(server, "issues", item)
       )
       i.issue_id = 0
-  if i.closed_at
+  if i.closed_at > 0
     i.is_closed = true
   item = db.one(table_name, {server_id: i.id})
   if item
@@ -123,7 +123,6 @@ prepareAddServer = () ->
           has_connect: true,
           dbtype: dbtype
         })
-        console.log server
       )
     else if domain.match("redmine")
       dbtype = "redmine"
@@ -172,7 +171,9 @@ renderProject = (project) ->
   """)
 
 renderIssues = (issues=null) ->
-  issues = db.find("issues",{is_closed: false, assignee_id: 1}, {order:{ins_at:"desc"}}) unless issues
+  issues = db.find("issues",{assignee_id: 1, closed_at: {le: 1}}, {order:{ins_at:"desc"}}) unless issues
+  #issues = db.find("issues",{assignee_id: 1}, {order:{ins_at:"desc"}}) unless issues
+
   $(".issues").html("")
   for issue in issues
     renderIssue(issue) if !issue.is_ddt && !issue.will_start_on
@@ -191,6 +192,10 @@ prepareCards = (issue_id) ->
     )
     $("#issue_#{issue_id} div div .ddt").click(() ->
       renderDdt(issue_id)
+      return false
+    )
+    $("#issue_#{issue_id} div div .cls").click(() ->
+      renderCls(issue_id)
       return false
     )
   )
@@ -223,6 +228,13 @@ renderDdt = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   issue.is_ddt = true
   db.upd("issues", issue)
+  $("#issue_#{issue.id}").fadeOut(200)
+
+renderCls = (issue_id) ->
+  issue = db.one("issues", {id: issue_id})
+  issue.closed_at = now()
+  db.upd("issues", issue)
+  debug "renderCls", issue
   $("#issue_#{issue.id}").fadeOut(200)
 
 renderCards = (issue_id = null) ->

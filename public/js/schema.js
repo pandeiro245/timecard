@@ -21,7 +21,7 @@ window.schema = {
     project_id: 0,
     server_id: 0,
     is_ddt: "off",
-    is_closed: "off",
+    closed_at: 0,
     user_id: 0,
     assignee_id: 0,
     will_start_on: "",

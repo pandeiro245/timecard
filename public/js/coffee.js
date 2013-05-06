@@ -41,7 +41,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, pushIfHasIssue, renderCards, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
 
   working_log = null;
 
@@ -180,7 +180,7 @@
         i.issue_id = 0;
       }
     }
-    if (i.closed_at) {
+    if (i.closed_at > 0) {
       i.is_closed = true;
     }
     item = db.one(table_name, {
@@ -237,14 +237,13 @@
         return $.get(url, function(data) {
           var server;
 
-          server = db.ins("servers", {
+          return server = db.ins("servers", {
             domain: domain,
             token: token,
             user_id: data.id,
             has_connect: true,
             dbtype: dbtype
           });
-          return console.log(server);
         });
       } else if (domain.match("redmine")) {
         dbtype = "redmine";
@@ -293,8 +292,10 @@
     }
     if (!issues) {
       issues = db.find("issues", {
-        is_closed: false,
-        assignee_id: 1
+        assignee_id: 1,
+        closed_at: {
+          le: 1
+        }
       }, {
         order: {
           ins_at: "desc"
@@ -324,8 +325,12 @@
         renderCards(issue_id);
         return false;
       });
-      return $("#issue_" + issue_id + " div div .ddt").click(function() {
+      $("#issue_" + issue_id + " div div .ddt").click(function() {
         renderDdt(issue_id);
+        return false;
+      });
+      return $("#issue_" + issue_id + " div div .cls").click(function() {
+        renderCls(issue_id);
         return false;
       });
     });
@@ -374,6 +379,18 @@
     });
     issue.is_ddt = true;
     db.upd("issues", issue);
+    return $("#issue_" + issue.id).fadeOut(200);
+  };
+
+  renderCls = function(issue_id) {
+    var issue;
+
+    issue = db.one("issues", {
+      id: issue_id
+    });
+    issue.closed_at = now();
+    db.upd("issues", issue);
+    debug("renderCls", issue);
     return $("#issue_" + issue.id).fadeOut(200);
   };
 
