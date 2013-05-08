@@ -1,7 +1,7 @@
 working_log = null
 
 init = () ->
-  prepareNodeServer()
+  #prepareNodeServer()
   prepareAddServer()
   prepareAddProject()
   renderProjects()

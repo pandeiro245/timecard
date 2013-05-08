@@ -18,7 +18,9 @@
 <script src="./js/umecob.js"></script>
 <script src="./js/jshint.js"></script>
 <script src="./js/schema.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <script src="./js/coffee.js"></script>
+
 </head>
 <body>
 <div class="navbar navbar-inverse navbar-fixed-top">
@@ -65,6 +67,12 @@
       <div class="hero-unit">
         <h1>enjoy working!</h1>
         <p>working is fun.</p>
+
+        <form>
+            <input id='field' type="text" />
+            <input id='send' type="submit" value="send" />
+            <div id="body"></div>
+        </form>
       </div>
       <div class="row-fluid" id="issues">
       </div><!--/row-->

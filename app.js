@@ -1,5 +1,5 @@
 (function() {
-  var JSRel, addIssue, addProject, api, app, db, dispTime, express, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, last_fetch, node_dev, now, pushIfHasIssue, save_diffs, schema, setInfo, sync, sync_item, turnback, uploading_icon, working_log, zero;
+  var JSRel, addIssue, addProject, api, app, buffer, callback, db, dispTime, express, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, http, io, last_fetch, node_dev, now, pushIfHasIssue, save_diffs, schema, server, setInfo, sync, sync_item, turnback, uploading_icon, working_log, zero;
 
   JSRel = require('jsrel');
 
@@ -8,6 +8,12 @@
   app = express();
 
   app.use(express.bodyParser());
+
+  http = require('http');
+
+  server = http.createServer(app);
+
+  io = require('socket.io').listen(server);
 
   app.get('*', function(req, res) {
     if (req.url === "/node_dev") {
@@ -49,26 +55,23 @@
       });
     } else if (req.url.match("diff")) {
       save_diffs(req.body);
-      body = JSON.stringify(fetch());
+      body = JSON.stringify(callback());
     } else {
       body = JSON.stringify({
         id: req.query["id"]
       });
     }
-    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'text/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Length', body.length);
     return res.end(body);
   };
 
   save_diffs = function(data) {
-    var server;
-
     server = null;
     sync(server, "projects", data.diffs.projects);
     sync(server, "issues", data.diffs.issues);
-    sync(server, "work_logs", data.diffs.work_logs);
-    return last_fetch(now());
+    return sync(server, "work_logs", data.diffs.work_logs);
   };
 
   schema = {
@@ -115,13 +118,47 @@
 
   working_log = null;
 
-  fetch = function() {
-    var issues, project_ids, projects, work_logs;
+  callback = function() {
+    var issue, issue_ids, issues, project, project_ids, projects, server_ids, work_log_ids, work_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
 
-    projects = db.find("projects");
-    issues = db.find("issues");
-    work_logs = db.find("work_logs");
+    projects = [];
+    issues = [];
+    _ref = db.find("projects", null, {
+      limit: 1
+    });
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      project = _ref[_i];
+      project.server_id = project.id;
+      delete project.id;
+      projects.push(project);
+    }
+    _ref1 = db.find("issues", null, {
+      limit: 1
+    });
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      issue = _ref1[_j];
+      issue.server_id = issue.id;
+      delete issue.id;
+      issues.push(issue);
+    }
     project_ids = {};
+    issue_ids = {};
+    work_log_ids = {};
+    for (_k = 0, _len2 = projects.length; _k < _len2; _k++) {
+      project = projects[_k];
+      project_ids[project.server_id] = project.id;
+    }
+    for (_l = 0, _len3 = issues.length; _l < _len3; _l++) {
+      issue = issues[_l];
+      issue_ids[issue.server_id] = issue.id;
+    }
+    work_log_ids = [];
+    work_logs = [];
+    server_ids = {
+      projects: project_ids,
+      issue: issue_ids,
+      work_logs: work_log_ids
+    };
     return {
       projects: projects,
       issues: issues,
@@ -361,6 +398,36 @@
     return work_log;
   };
 
-  app.listen(3000);
+  buffer = [];
+
+  io.sockets.on('connection', function(client) {
+    var clientId;
+
+    clientId = 'User' + client.id.substr(client.id.length - 3, 3);
+    client.broadcast.emit('connect', clientId + ' connected');
+    client.emit('message', {
+      'messages': buffer
+    });
+    client.on('message', function(message) {
+      var msg;
+
+      msg = {
+        user: clientId,
+        message: message
+      };
+      buffer.push(msg);
+      if (buffer.length > 15) {
+        buffer.shift();
+        return client.broadcast.emit('message', {
+          'messages': [msg]
+        });
+      }
+    });
+    return client.on('disconnect', function() {
+      return client.broadcast.emit('disconnect', clientId + ' disconnected');
+    });
+  });
+
+  server.listen(3000);
 
 }).call(this);

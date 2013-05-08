@@ -2,6 +2,11 @@ JSRel = require('jsrel')
 express = require("express")
 app = express()
 app.use(express.bodyParser())
+http = require('http')
+server = http.createServer(app)
+io = require('socket.io').listen(server)
+
+
 app.get('*', (req, res) ->
   if req.url == "/node_dev"
     node_dev(req, res)
@@ -32,10 +37,11 @@ api = (req, res) ->
     body = JSON.stringify({id: 1})
   else if(req.url.match("diff"))
     save_diffs(req.body)
-    body = JSON.stringify(fetch())
+    body = JSON.stringify(callback())
   else
     body = JSON.stringify({id: req.query["id"]})
-  res.setHeader('Content-Type', 'application/json')
+  #res.setHeader('Content-Type', 'application/json')
+  res.setHeader('Content-Type', 'text/json')
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Content-Length', body.length)
   res.end(body)
@@ -45,7 +51,6 @@ save_diffs = (data) ->
   sync(server, "projects", data.diffs.projects)
   sync(server, "issues", data.diffs.issues)
   sync(server, "work_logs", data.diffs.work_logs)
-  last_fetch(now())
 
 schema = {
   servers: {
@@ -92,11 +97,35 @@ schema = {
 
 working_log = null
 
-fetch = () ->
-  projects = db.find("projects")
-  issues = db.find("issues")
-  work_logs = db.find("work_logs")
-  project_ids = {} #TODO
+#fetch = () ->
+callback = () ->
+  projects = []
+  issues = []
+  for project in db.find("projects", null, {limit:1})
+    project.server_id = project.id
+    delete project.id
+    projects.push(project)
+  for issue in db.find("issues", null, {limit:1})
+    issue.server_id = issue.id
+    delete issue.id
+    issues.push(issue)
+    
+  project_ids = {}
+  issue_ids = {}
+  work_log_ids = {}
+  for project in projects
+    project_ids[project.server_id] = project.id
+  for issue in issues
+    issue_ids[issue.server_id] = issue.id
+
+  work_log_ids = [] #TODO
+  work_logs = [] #TODO
+
+  server_ids = {
+    projects:  project_ids,
+    issue:  issue_ids,
+    work_logs:  work_log_ids
+  }
   return {
     projects: projects,
     issues: issues,
@@ -229,4 +258,24 @@ forUploadWorkLog = (work_log) ->
   delete work_log.id
   return work_log
 
-app.listen(3000)
+buffer = []
+io.sockets.on('connection', (client)->
+  clientId = 'User'+client.id.substr(client.id.length-3,3)
+
+  client.broadcast.emit('connect',clientId + ' connected')
+  client.emit('message',{'messages':buffer})
+
+  client.on('message', (message)->
+    msg = { user: clientId, message: message}
+    buffer.push(msg)
+    if (buffer.length > 15)
+      buffer.shift()
+      client.broadcast.emit('message',{'messages':[msg]})
+  )
+  client.on('disconnect', ()->
+    client.broadcast.emit('disconnect',clientId + ' disconnected')
+  )
+)
+
+#app.listen(3000)
+server.listen(3000)

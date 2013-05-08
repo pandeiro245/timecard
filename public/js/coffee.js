@@ -1,4 +1,49 @@
 (function() {
+  var socket;
+
+  socket = io.connect('/');
+
+  socket.on('connect', function(data) {
+    if (data) {
+      return $('#body').prepend('</br>' + data);
+    }
+  });
+
+  socket.on('message', function(data) {
+    var msg, _i, _len, _ref, _results;
+
+    _ref = data.messages;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      msg = _ref[_i];
+      _results.push($('#body').prepend("</br>" + msg.user + " says: " + msg.message));
+    }
+    return _results;
+  });
+
+  socket.on('disconnect', function(data) {
+    return $('#body').prepend('</br>' + data);
+  });
+
+  $(document).ready(function() {
+    $('#send').click(function() {
+      var msg;
+
+      msg = $('#field').val();
+      if (msg) {
+        socket.send(msg);
+        $('#body').prepend('</br>You say: ' + msg);
+        return $('#field').val('');
+      }
+    });
+    return $('form').on('submit', function() {
+      return false;
+    });
+  });
+
+}).call(this);
+
+(function() {
   window.helpers = {
     enter: function(dom, callback) {
       return $(dom).keypress(function(e) {
@@ -46,7 +91,6 @@
   working_log = null;
 
   init = function() {
-    prepareNodeServer();
     prepareAddServer();
     prepareAddProject();
     renderProjects();
