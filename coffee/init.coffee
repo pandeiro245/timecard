@@ -32,16 +32,13 @@ fetch = (server) ->
   if wlsis and wlsis.val
     for working_log_server_id in wlsis.val.split(",")
       working_logs.push(db.one("work_logs", {server_id: parseInt(working_log_server_id)}))
-
   params = {
     token: token,
     last_fetch: last_fetch(),
     diffs: diffs,
     working_logs: working_logs
   }
-
-  debug "diffs", diffs
-  debug "fetch at", now()
+  debug "fetch diffs", diffs
   url = "#{domain}/api/v1/diffs.json"
   $.post(url, params, (data) ->
     wlsis = db.one("infos", {key: "working_log_server_ids"})
@@ -62,11 +59,13 @@ sync = (server, table_name, data) ->
     for table_name, server_ids of data
       for local_id, server_id of server_ids
         item = db.one(table_name, {id: local_id})
-        item.server_id = server_id
-        db.upd(table_name, item)
+        if item
+          item.server_id = server_id
+          db.upd(table_name, item)
   else
-    for i in data
-      sync_item(server, table_name, i)
+    if data
+      for i in data
+        sync_item(server, table_name, i)
 
 sync_item = (server, table_name, i) ->
   if i.project_id
@@ -188,12 +187,12 @@ renderProject = (project) ->
   """)
 
 renderIssues = (issues=null) ->
-  issues = db.find("issues",{assignee_id: 1, closed_at: {le: 1}}, {order:{ins_at:"desc"}}) unless issues
-  #issues = db.find("issues",{assignee_id: 1}, {order:{ins_at:"desc"}}) unless issues
-
+  issues = db.find("issues",{assignee_id: 1, closed_at: {le: 1}}, {order:{upd_at:"desc"}}) unless issues
   $(".issues").html("")
+  i = 1
   for issue in issues
-    renderIssue(issue) if !issue.is_ddt && !issue.will_start_on
+    renderIssue(issue, null, i) if !issue.is_ddt && !issue.will_start_on
+    i = i + 0
   renderCards()
 
 prepareCards = (issue_id) ->
@@ -217,20 +216,27 @@ prepareCards = (issue_id) ->
     )
   )
 
-renderIssue = (issue, target="append") ->
+renderIssue = (issue, target=null, i = null) ->
+  target = "append" unless target
   $project = $("#project_#{issue.project_id}")
   $project_issues = $("#project_#{issue.project_id} .issues")
   $project.fadeIn(200)
   title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
   icon = if issue.server_id then "" else uploading_icon
-  start_or_end = if working_log && working_log.issue_id == issue.id then "End" else "Start"
+  start_or_end = if working_log && working_log.issue_id == issue.id then "Stop" else "Start"
+
+  if i%4 == 1
+    style = "style=\"margin-left:0;\""
+  else
+    style = ""
 
   umecob({use: 'jquery', tpl_id: "./partials/issue.html", data:{
     issue: issue,
     title: title,
     icon: icon,
-    start_or_end: start_or_end
+    start_or_end: start_or_end,
+    style: style
   }}).next((html) ->
     if target == "append"
       $project_issues.append(html)
@@ -324,7 +330,7 @@ renderWorkingLog = () ->
     time = dispTime(working_log)
     $(".work_log_#{working_log.id} .time").html(time)
     $("#issue_#{working_log.issue_id} h2 .time").html("(#{time})")
-    $("#issue_#{working_log.issue_id} div div .card").html("End")
+    $("#issue_#{working_log.issue_id} div div .card").html("Stop")
 
 loopRenderWorkLogs = () ->
   renderWorkingLog()
@@ -391,6 +397,7 @@ turnback = ($e) ->
 
 findWillUploads = (table_name) ->
   db.find(table_name, {server_id: null})
+  #db.find(table_name, {upd_at:{gt: last_fetch()}}) #こちらにすると自分担当の物もassignee_idが上書きされてアップされてしまうので注意
 
 pushIfHasIssue = (project, projects) ->
   if db.one("issues", {project_id: project.id})

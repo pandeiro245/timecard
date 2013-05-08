@@ -147,8 +147,7 @@
       diffs: diffs,
       working_logs: working_logs
     };
-    debug("diffs", diffs);
-    debug("fetch at", now());
+    debug("fetch diffs", diffs);
     url = "" + domain + "/api/v1/diffs.json";
     return $.post(url, params, function(data) {
       wlsis = db.one("infos", {
@@ -188,20 +187,26 @@
             item = db.one(table_name, {
               id: local_id
             });
-            item.server_id = server_id;
-            _results1.push(db.upd(table_name, item));
+            if (item) {
+              item.server_id = server_id;
+              _results1.push(db.upd(table_name, item));
+            } else {
+              _results1.push(void 0);
+            }
           }
           return _results1;
         })());
       }
       return _results;
     } else {
-      _results1 = [];
-      for (_i = 0, _len = data.length; _i < _len; _i++) {
-        i = data[_i];
-        _results1.push(sync_item(server, table_name, i));
+      if (data) {
+        _results1 = [];
+        for (_i = 0, _len = data.length; _i < _len; _i++) {
+          i = data[_i];
+          _results1.push(sync_item(server, table_name, i));
+        }
+        return _results1;
       }
-      return _results1;
     }
   };
 
@@ -356,7 +361,7 @@
   };
 
   renderIssues = function(issues) {
-    var issue, _i, _len;
+    var i, issue, _i, _len;
 
     if (issues == null) {
       issues = null;
@@ -369,16 +374,18 @@
         }
       }, {
         order: {
-          ins_at: "desc"
+          upd_at: "desc"
         }
       });
     }
     $(".issues").html("");
+    i = 1;
     for (_i = 0, _len = issues.length; _i < _len; _i++) {
       issue = issues[_i];
       if (!issue.is_ddt && !issue.will_start_on) {
-        renderIssue(issue);
+        renderIssue(issue, null, i);
       }
+      i = i + 0;
     }
     return renderCards();
   };
@@ -407,10 +414,16 @@
     });
   };
 
-  renderIssue = function(issue, target) {
-    var $project, $project_issues, icon, start_or_end, title;
+  renderIssue = function(issue, target, i) {
+    var $project, $project_issues, icon, start_or_end, style, title;
 
     if (target == null) {
+      target = null;
+    }
+    if (i == null) {
+      i = null;
+    }
+    if (!target) {
       target = "append";
     }
     $project = $("#project_" + issue.project_id);
@@ -421,7 +434,12 @@
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
     icon = issue.server_id ? "" : uploading_icon;
-    start_or_end = working_log && working_log.issue_id === issue.id ? "End" : "Start";
+    start_or_end = working_log && working_log.issue_id === issue.id ? "Stop" : "Start";
+    if (i % 4 === 1) {
+      style = "style=\"margin-left:0;\"";
+    } else {
+      style = "";
+    }
     return umecob({
       use: 'jquery',
       tpl_id: "./partials/issue.html",
@@ -429,7 +447,8 @@
         issue: issue,
         title: title,
         icon: icon,
-        start_or_end: start_or_end
+        start_or_end: start_or_end,
+        style: style
       }
     }).next(function(html) {
       if (target === "append") {
@@ -596,7 +615,7 @@
       time = dispTime(working_log);
       $(".work_log_" + working_log.id + " .time").html(time);
       $("#issue_" + working_log.issue_id + " h2 .time").html("(" + time + ")");
-      return $("#issue_" + working_log.issue_id + " div div .card").html("End");
+      return $("#issue_" + working_log.issue_id + " div div .card").html("Stop");
     }
   };
 
