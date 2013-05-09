@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, working_log, zero;
 
   init = function() {
     prepareAddServer();
@@ -402,8 +402,12 @@
         renderDdt(issue_id);
         return false;
       });
-      return $("#issue_" + issue_id + " div div .cls").click(function() {
+      $("#issue_" + issue_id + " div div .cls").click(function() {
         renderCls(issue_id);
+        return false;
+      });
+      return $("#issue_" + issue_id + " div div .edit").click(function() {
+        renderEdit(issue_id);
         return false;
       });
     });
@@ -486,6 +490,17 @@
     return $("#issue_" + issue.id).fadeOut(200);
   };
 
+  renderEdit = function(issue_id) {
+    var issue;
+
+    issue = db.one("issues", {
+      id: issue_id
+    });
+    issue.title = prompt('issue title', issue.title);
+    db.upd("issues", issue);
+    return $("#issue_" + issue.id + " h2").html(issue.title);
+  };
+
   renderCards = function(issue_id) {
     if (issue_id == null) {
       issue_id = null;
@@ -510,7 +525,6 @@
     if (issue_id == null) {
       issue_id = null;
     }
-    console.log("hoge");
     $(".card").html("Start");
     $(".card").removeClass("btn-warning");
     $(".card").addClass("btn-primary");

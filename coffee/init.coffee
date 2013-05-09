@@ -213,6 +213,10 @@ prepareCards = (issue_id) ->
       renderCls(issue_id)
       return false
     )
+    $("#issue_#{issue_id} div div .edit").click(() ->
+      renderEdit(issue_id)
+      return false
+    )
   )
 
 renderIssue = (issue, target=null, i = null) ->
@@ -265,6 +269,12 @@ renderCls = (issue_id) ->
   debug "renderCls", issue
   $("#issue_#{issue.id}").fadeOut(200)
 
+renderEdit = (issue_id) ->
+  issue = db.one("issues", {id: issue_id})
+  issue.title = prompt('issue title', issue.title)
+  db.upd("issues", issue)
+  $("#issue_#{issue.id} h2").html(issue.title)
+
 renderCards = (issue_id = null) ->
   updateWorkingLog(null, issue_id)
 
@@ -275,7 +285,6 @@ stopWorkLog = (issue_id) ->
   updateWorkingLog(false, issue_id)
 
 updateWorkingLog = (is_start=null, issue_id=null) ->
-  console.log "hoge"
   $(".card").html("Start")
   $(".card").removeClass("btn-warning")
   $(".card").addClass("btn-primary")
