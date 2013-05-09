@@ -86,9 +86,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uploading_icon, working_log, zero;
-
-  working_log = null;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startOrStopWorkingLog, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, working_log, zero;
 
   init = function() {
     prepareAddServer();
@@ -357,7 +355,7 @@
   };
 
   renderProject = function(project) {
-    return $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uploading_icon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div class=\"issues\"></div>\n</div>");
+    return $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div class=\"issues\"></div>\n</div>");
   };
 
   renderIssues = function(issues) {
@@ -368,7 +366,6 @@
     }
     if (!issues) {
       issues = db.find("issues", {
-        assignee_id: 1,
         closed_at: {
           le: 1
         }
@@ -433,8 +430,8 @@
     if (issue.body && issue.body.length > 0) {
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
-    icon = issue.server_id ? "" : uploading_icon;
-    start_or_end = working_log && working_log.issue_id === issue.id ? "Stop" : "Start";
+    icon = issue.server_id ? "" : uicon;
+    start_or_end = working_log() && working_log().issue_id === issue.id ? "Stop" : "Start";
     if (i % 4 === 1) {
       style = "style=\"margin-left:0;\"";
     } else {
@@ -488,48 +485,53 @@
     if (issue_id == null) {
       issue_id = null;
     }
-    if (working_log) {
-      if (issue_id) {
-        stopWorkLog();
-      }
-      if (parseInt(issue_id) !== parseInt(working_log.issue_id)) {
-        return startWorkLog(issue_id);
-      } else {
-        return working_log = null;
-      }
-    } else {
-      if (!issue_id) {
-        return $(".card").html("Start");
-      } else {
-        return startWorkLog(issue_id);
-      }
-    }
-  };
-
-  stopWorkLog = function() {
-    working_log.end_at = now();
-    db.upd("work_logs", working_log);
-    return $("#issue_" + working_log.issue_id + " .card").html("start");
+    $(".card").html("Start");
+    $(".card").removeClass("btn-worning");
+    $(".card").addClass("btn-primary");
+    return startOrStopWorkingLog(null, issue_id);
   };
 
   startWorkLog = function(issue_id) {
-    var cond;
+    return startOrStopWorkingLog(true, issue_id);
+  };
 
+  stopWorkLog = function(issue_id) {
+    return startOrStopWorkingLog(false, issue_id);
+  };
+
+  startOrStopWorkingLog = function(is_start, issue_id) {
+    var wl;
+
+    if (is_start == null) {
+      is_start = null;
+    }
     if (issue_id == null) {
       issue_id = null;
     }
-    if (issue_id && !working_log) {
-      cond = {
-        issue_id: issue_id,
-        started_at: now(),
-        user_id: 0
-      };
-      working_log = db.one("work_logs", cond);
-      if (!working_log) {
-        working_log = db.ins("work_logs", cond);
-      }
-      return $("#issue_" + issue_id + " .card").html("stop");
+    wl = working_log();
+    if (wl && issue_id) {
+      wl.end_at = now();
+      db.upd("work_logs", wl);
     }
+    if (is_start === null) {
+      if (wl && parseInt(wl.issue_id) === parseInt(issue_id)) {
+        is_start = false;
+      } else {
+        is_start = true;
+      }
+    }
+    if (is_start && issue_id) {
+      db.ins("work_logs", {
+        issue_id: issue_id,
+        started_at: now()
+      });
+    }
+    if (working_log()) {
+      issue_id = working_log().issue_id;
+    }
+    $("#issue_" + issue_id + " .card").html("Stop");
+    $("#issue_" + issue_id + " .card").removeClass("btn-primary");
+    return $("#issue_" + issue_id + " .card").addClass("btn-warning");
   };
 
   addIssue = function(project_id, title) {
@@ -538,9 +540,7 @@
     issue = db.ins("issues", {
       title: title,
       project_id: project_id,
-      body: "",
-      assignee_id: 1,
-      user_id: 1
+      body: ""
     });
     return renderIssue(issue, "prepend");
   };
@@ -557,7 +557,7 @@
   };
 
   renderWorkLogs = function(server) {
-    var issue, stop, url, work_log, _i, _len, _ref, _results;
+    var issue, stop, url, work_log, working_log, _i, _len, _ref, _results;
 
     if (server == null) {
       server = null;
@@ -591,7 +591,7 @@
       if (!work_log.end_at) {
         stop = "<a href=\"#\" class=\"cardw\">STOP</a>";
       }
-      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">\n" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uploading_icon) + "\n" + stop + "\n</li>");
+      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">\n" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uicon) + "\n" + stop + "\n</li>");
       $(".cardw").click(function() {
         var issue_id;
 
@@ -609,13 +609,14 @@
   };
 
   renderWorkingLog = function() {
-    var time;
+    var time, wl;
 
-    if (working_log) {
-      time = dispTime(working_log);
-      $(".work_log_" + working_log.id + " .time").html(time);
-      $("#issue_" + working_log.issue_id + " h2 .time").html("(" + time + ")");
-      return $("#issue_" + working_log.issue_id + " div div .card").html("Stop");
+    wl = working_log();
+    if (wl) {
+      time = dispTime(wl);
+      $(".work_log_" + wl.id + " .time").html(time);
+      $("#issue_" + wl.issue_id + " h2 .time").html("(" + time + ")");
+      return $("#issue_" + wl.issue_id + " div div .card").html("Stop");
     }
   };
 
@@ -717,7 +718,7 @@
     return parseInt((new Date().getTime()) / 1000);
   };
 
-  uploading_icon = "<i class=\"icon-circle-arrow-up\"></i>";
+  uicon = "<i class=\"icon-circle-arrow-up\"></i>";
 
   turnback = function($e) {
     if ($e.css("display") === "none") {
@@ -783,6 +784,21 @@
   debug = function(title, data) {
     console.log(title);
     return console.log(data);
+  };
+
+  working_log = function(issue_id, is_start) {
+    var cond, work_log;
+
+    if (issue_id == null) {
+      issue_id = null;
+    }
+    if (is_start == null) {
+      is_start = true;
+    }
+    cond = {
+      end_at: null
+    };
+    return work_log = db.one("work_logs", cond);
   };
 
   window.db = db;

@@ -1,5 +1,3 @@
-working_log = null
-
 init = () ->
   #prepareNodeServer()
   prepareAddServer()
@@ -175,7 +173,7 @@ renderProject = (project) ->
     <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
     <div class=\"span12\">
     <h1>
-      #{project.name}#{if project.server_id then "" else uploading_icon}
+      #{project.name}#{if project.server_id then "" else uicon}
     </h1>
     <div class=\"input-append\"> 
       <input type=\"text\" class=\"input\" />
@@ -187,11 +185,12 @@ renderProject = (project) ->
   """)
 
 renderIssues = (issues=null) ->
-  issues = db.find("issues",{assignee_id: 1, closed_at: {le: 1}}, {order:{upd_at:"desc"}}) unless issues
+  issues = db.find("issues",{closed_at: {le: 1}}, {order:{upd_at:"desc"}}) unless issues
   $(".issues").html("")
   i = 1
   for issue in issues
-    renderIssue(issue, null, i) if !issue.is_ddt && !issue.will_start_on
+    if !issue.is_ddt && !issue.will_start_on
+      renderIssue(issue, null, i)
     i = i + 0
   renderCards()
 
@@ -223,8 +222,8 @@ renderIssue = (issue, target=null, i = null) ->
   $project.fadeIn(200)
   title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
-  icon = if issue.server_id then "" else uploading_icon
-  start_or_end = if working_log && working_log.issue_id == issue.id then "Stop" else "Start"
+  icon = if issue.server_id then "" else uicon
+  start_or_end = if working_log() && working_log().issue_id == issue.id then "Stop" else "Start"
 
   if i%4 == 1
     style = "style=\"margin-left:0;\""
@@ -261,32 +260,36 @@ renderCls = (issue_id) ->
   $("#issue_#{issue.id}").fadeOut(200)
 
 renderCards = (issue_id = null) ->
-  if working_log
-    stopWorkLog() if issue_id
-    if  parseInt(issue_id) != parseInt(working_log.issue_id)
-      startWorkLog(issue_id)
-    else
-      working_log = null
-  else
-    if !issue_id
-      $(".card").html("Start")
-    else
-      startWorkLog(issue_id)
+  $(".card").html("Start")
+  $(".card").removeClass("btn-worning")
+  $(".card").addClass("btn-primary")
+  startOrStopWorkingLog(null, issue_id)
 
-stopWorkLog = () ->
-  working_log.end_at = now()
-  db.upd("work_logs", working_log)
-  $("#issue_#{working_log.issue_id} .card").html("start")
+startWorkLog = (issue_id) ->
+  startOrStopWorkingLog(true, issue_id)
 
-startWorkLog = (issue_id = null) ->
-  if issue_id && !working_log
-    cond = {issue_id: issue_id, started_at: now(), user_id:0}
-    working_log = db.one("work_logs", cond)
-    working_log = db.ins("work_logs", cond) unless working_log
-    $("#issue_#{issue_id} .card").html("stop")
+stopWorkLog = (issue_id) ->
+  startOrStopWorkingLog(false, issue_id)
+
+startOrStopWorkingLog = (is_start=null, issue_id=null) ->
+  wl = working_log()
+  if wl && issue_id
+    wl.end_at = now()
+    db.upd("work_logs", wl)
+  if is_start == null
+    if wl && parseInt(wl.issue_id) == parseInt(issue_id)
+      is_start = false
+    else
+      is_start = true
+  if is_start && issue_id
+    db.ins("work_logs", {issue_id: issue_id, started_at: now()})
+  issue_id = working_log().issue_id if working_log()
+  $("#issue_#{issue_id} .card").html("Stop")
+  $("#issue_#{issue_id} .card").removeClass("btn-primary")
+  $("#issue_#{issue_id} .card").addClass("btn-warning")
 
 addIssue = (project_id, title) ->
-  issue = db.ins("issues", {title: title, project_id: project_id, body:"", assignee_id:1, user_id:1})
+  issue = db.ins("issues", {title: title, project_id: project_id, body:""})
   renderIssue(issue, "prepend")
 
 addProject = (name) ->
@@ -313,7 +316,7 @@ renderWorkLogs = (server=null) ->
       <li class=\"work_log_#{work_log.id}\">
       #{issue.title}
       <span class=\"time\">#{dispTime(work_log)}</span>
-      #{if work_log.server_id then "" else uploading_icon}
+      #{if work_log.server_id then "" else uicon}
       #{stop}
       </li>
     """)
@@ -326,11 +329,12 @@ renderWorkLogs = (server=null) ->
       working_log = work_log
 
 renderWorkingLog = () ->
-  if working_log
-    time = dispTime(working_log)
-    $(".work_log_#{working_log.id} .time").html(time)
-    $("#issue_#{working_log.issue_id} h2 .time").html("(#{time})")
-    $("#issue_#{working_log.issue_id} div div .card").html("Stop")
+  wl = working_log()
+  if wl
+    time = dispTime(wl)
+    $(".work_log_#{wl.id} .time").html(time)
+    $("#issue_#{wl.issue_id} h2 .time").html("(#{time})")
+    $("#issue_#{wl.issue_id} div div .card").html("Stop")
 
 loopRenderWorkLogs = () ->
   renderWorkingLog()
@@ -390,7 +394,7 @@ zero = (int) ->
 now = () ->
   parseInt((new Date().getTime())/1000)
 
-uploading_icon = "<i class=\"icon-circle-arrow-up\"></i>"
+uicon = "<i class=\"icon-circle-arrow-up\"></i>"
 
 turnback = ($e) ->
   if $e.css("display") == "none" then $e.fadeIn(400) else  $e.fadeOut(400)
@@ -431,6 +435,10 @@ forUploadWorkLog = (work_log) ->
 debug = (title, data) ->
   console.log title
   console.log data
+
+working_log = (issue_id=null, is_start=true) ->
+  cond = {end_at: null}
+  work_log = db.one("work_logs", cond)
 
 window.db = db
 
