@@ -552,8 +552,9 @@
     if (working_log()) {
       $("#issue_" + issue_id + " .card").html("Stop");
       $("#issue_" + issue_id + " .card").removeClass("btn-primary");
-      return $("#issue_" + issue_id + " .card").addClass("btn-warning");
+      $("#issue_" + issue_id + " .card").addClass("btn-warning");
     }
+    return renderWorkLogs();
   };
 
   addIssue = function(project_id, title) {
@@ -611,9 +612,9 @@
       }
       stop = "";
       if (!work_log.end_at) {
-        stop = "<a href=\"#\" class=\"cardw\">STOP</a>";
+        stop = "<div style=\"padding:10px;\">\n<a href=\"#\" class=\"cardw btn btn-warning\">STOP</a>\n</div>";
       }
-      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">\n" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uicon) + "\n" + stop + "\n</li>");
+      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">\n" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uicon) + "\n" + stop + "</div>\n</li>");
       $(".cardw").click(function() {
         var issue_id;
 

@@ -304,6 +304,7 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
     $("#issue_#{issue_id} .card").html("Stop")
     $("#issue_#{issue_id} .card").removeClass("btn-primary")
     $("#issue_#{issue_id} .card").addClass("btn-warning")
+  renderWorkLogs()
 
 addIssue = (project_id, title) ->
   issue = db.ins("issues", {title: title, project_id: project_id, body:""})
@@ -328,13 +329,18 @@ renderWorkLogs = (server=null) ->
     else
       issue = {title: "issue名取得中"}
     stop = ""
-    stop = "<a href=\"#\" class=\"cardw\">STOP</a>" unless work_log.end_at
+    unless work_log.end_at
+      stop = """
+        <div style=\"padding:10px;\">
+        <a href=\"#\" class=\"cardw btn btn-warning\">STOP</a>
+        </div>
+      """
     $("#work_logs").append("""
       <li class=\"work_log_#{work_log.id}\">
       #{issue.title}
       <span class=\"time\">#{dispTime(work_log)}</span>
       #{if work_log.server_id then "" else uicon}
-      #{stop}
+      #{stop}</div>
       </li>
     """)
     $(".cardw").click(() ->
