@@ -223,7 +223,12 @@ renderIssue = (issue, target=null, i = null) ->
   title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
   icon = if issue.server_id then "" else uicon
-  start_or_end = if working_log() && working_log().issue_id == issue.id then "Stop" else "Start"
+  if working_log() && working_log().issue_id == issue.id
+    disp = "Stop"
+    btn_type = "btn-warning"
+  else
+    disp = "Start"
+    btn_type = "btn-primary"
 
   if i%4 == 1
     style = "style=\"margin-left:0;\""
@@ -234,7 +239,8 @@ renderIssue = (issue, target=null, i = null) ->
     issue: issue,
     title: title,
     icon: icon,
-    start_or_end: start_or_end,
+    disp: disp,
+    btn_type: btn_type,
     style: style
   }}).next((html) ->
     if target == "append"
@@ -260,18 +266,19 @@ renderCls = (issue_id) ->
   $("#issue_#{issue.id}").fadeOut(200)
 
 renderCards = (issue_id = null) ->
-  $(".card").html("Start")
-  $(".card").removeClass("btn-worning")
-  $(".card").addClass("btn-primary")
-  startOrStopWorkingLog(null, issue_id)
+  updateWorkingLog(null, issue_id)
 
 startWorkLog = (issue_id) ->
-  startOrStopWorkingLog(true, issue_id)
+  updateWorkingLog(true, issue_id)
 
 stopWorkLog = (issue_id) ->
-  startOrStopWorkingLog(false, issue_id)
+  updateWorkingLog(false, issue_id)
 
-startOrStopWorkingLog = (is_start=null, issue_id=null) ->
+updateWorkingLog = (is_start=null, issue_id=null) ->
+  console.log "hoge"
+  $(".card").html("Start")
+  $(".card").removeClass("btn-warning")
+  $(".card").addClass("btn-primary")
   wl = working_log()
   if wl && issue_id
     wl.end_at = now()
@@ -284,9 +291,10 @@ startOrStopWorkingLog = (is_start=null, issue_id=null) ->
   if is_start && issue_id
     db.ins("work_logs", {issue_id: issue_id, started_at: now()})
   issue_id = working_log().issue_id if working_log()
-  $("#issue_#{issue_id} .card").html("Stop")
-  $("#issue_#{issue_id} .card").removeClass("btn-primary")
-  $("#issue_#{issue_id} .card").addClass("btn-warning")
+  if working_log()
+    $("#issue_#{issue_id} .card").html("Stop")
+    $("#issue_#{issue_id} .card").removeClass("btn-primary")
+    $("#issue_#{issue_id} .card").addClass("btn-warning")
 
 addIssue = (project_id, title) ->
   issue = db.ins("issues", {title: title, project_id: project_id, body:""})

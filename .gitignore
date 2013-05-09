@@ -2,3 +2,4 @@
 *.swp
 public/timecard.appcache
 crowdsourcing
+.DS_Store 

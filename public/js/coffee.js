@@ -1,45 +1,43 @@
 (function() {
   var socket;
 
-  socket = io.connect('/');
-
-  socket.on('connect', function(data) {
-    if (data) {
-      return $('#body').prepend('</br>' + data);
-    }
-  });
-
-  socket.on('message', function(data) {
-    var msg, _i, _len, _ref, _results;
-
-    _ref = data.messages;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      msg = _ref[_i];
-      _results.push($('#body').prepend("</br>" + msg.user + " says: " + msg.message));
-    }
-    return _results;
-  });
-
-  socket.on('disconnect', function(data) {
-    return $('#body').prepend('</br>' + data);
-  });
-
-  $(document).ready(function() {
-    $('#send').click(function() {
-      var msg;
-
-      msg = $('#field').val();
-      if (msg) {
-        socket.send(msg);
-        $('#body').prepend('</br>You say: ' + msg);
-        return $('#field').val('');
+  if (typeof io !== "undefined" && io !== null) {
+    socket = io.connect('/');
+    socket.on('connect', function(data) {
+      if (data) {
+        return $('#body').prepend('</br>' + data);
       }
     });
-    return $('form').on('submit', function() {
-      return false;
+    socket.on('message', function(data) {
+      var msg, _i, _len, _ref, _results;
+
+      _ref = data.messages;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        msg = _ref[_i];
+        _results.push($('#body').prepend("</br>" + msg.user + " says: " + msg.message));
+      }
+      return _results;
     });
-  });
+    socket.on('disconnect', function(data) {
+      return $('#body').prepend('</br>' + data);
+    });
+    $(document).ready(function() {
+      $('#send').click(function() {
+        var msg;
+
+        msg = $('#field').val();
+        if (msg) {
+          socket.send(msg);
+          $('#body').prepend('</br>You say: ' + msg);
+          return $('#field').val('');
+        }
+      });
+      return $('form').on('submit', function() {
+        return false;
+      });
+    });
+  }
 
 }).call(this);
 
@@ -86,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startOrStopWorkingLog, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, working_log, zero;
 
   init = function() {
     prepareAddServer();
@@ -412,7 +410,7 @@
   };
 
   renderIssue = function(issue, target, i) {
-    var $project, $project_issues, icon, start_or_end, style, title;
+    var $project, $project_issues, btn_type, disp, icon, style, title;
 
     if (target == null) {
       target = null;
@@ -431,7 +429,13 @@
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
     icon = issue.server_id ? "" : uicon;
-    start_or_end = working_log() && working_log().issue_id === issue.id ? "Stop" : "Start";
+    if (working_log() && working_log().issue_id === issue.id) {
+      disp = "Stop";
+      btn_type = "btn-warning";
+    } else {
+      disp = "Start";
+      btn_type = "btn-primary";
+    }
     if (i % 4 === 1) {
       style = "style=\"margin-left:0;\"";
     } else {
@@ -444,7 +448,8 @@
         issue: issue,
         title: title,
         icon: icon,
-        start_or_end: start_or_end,
+        disp: disp,
+        btn_type: btn_type,
         style: style
       }
     }).next(function(html) {
@@ -485,21 +490,18 @@
     if (issue_id == null) {
       issue_id = null;
     }
-    $(".card").html("Start");
-    $(".card").removeClass("btn-worning");
-    $(".card").addClass("btn-primary");
-    return startOrStopWorkingLog(null, issue_id);
+    return updateWorkingLog(null, issue_id);
   };
 
   startWorkLog = function(issue_id) {
-    return startOrStopWorkingLog(true, issue_id);
+    return updateWorkingLog(true, issue_id);
   };
 
   stopWorkLog = function(issue_id) {
-    return startOrStopWorkingLog(false, issue_id);
+    return updateWorkingLog(false, issue_id);
   };
 
-  startOrStopWorkingLog = function(is_start, issue_id) {
+  updateWorkingLog = function(is_start, issue_id) {
     var wl;
 
     if (is_start == null) {
@@ -508,6 +510,10 @@
     if (issue_id == null) {
       issue_id = null;
     }
+    console.log("hoge");
+    $(".card").html("Start");
+    $(".card").removeClass("btn-warning");
+    $(".card").addClass("btn-primary");
     wl = working_log();
     if (wl && issue_id) {
       wl.end_at = now();
@@ -529,9 +535,11 @@
     if (working_log()) {
       issue_id = working_log().issue_id;
     }
-    $("#issue_" + issue_id + " .card").html("Stop");
-    $("#issue_" + issue_id + " .card").removeClass("btn-primary");
-    return $("#issue_" + issue_id + " .card").addClass("btn-warning");
+    if (working_log()) {
+      $("#issue_" + issue_id + " .card").html("Stop");
+      $("#issue_" + issue_id + " .card").removeClass("btn-primary");
+      return $("#issue_" + issue_id + " .card").addClass("btn-warning");
+    }
   };
 
   addIssue = function(project_id, title) {
