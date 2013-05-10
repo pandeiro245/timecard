@@ -12,4 +12,4 @@ function fileSaveContents( filename , str ){
 
   return fileContent;
 };
-console.log( fileSaveContents( './public/js_views/sample.js' , issue ) );
+console.log( fileSaveContents( './public/js_views/issue.js' , issue ) );
