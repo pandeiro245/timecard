@@ -279,14 +279,11 @@
     if (location.href.match("local") && !db.one("servers", {
       domain: ""
     })) {
-      console.log(location.href);
       dbtype = "local";
       url = "/api/users.json";
       return $.get(url, function(data) {
         var server;
 
-        console.log(data);
-        console.log("aaa");
         return server = db.ins("servers", {
           domain: "",
           user_id: data.id,
@@ -486,7 +483,6 @@
     });
     issue.closed_at = now();
     db.upd("issues", issue);
-    debug("renderCls", issue);
     return $("#issue_" + issue.id).fadeOut(200);
   };
 
@@ -580,7 +576,7 @@
   };
 
   renderWorkLogs = function(server) {
-    var issue, stop, url, work_log, working_log, _i, _len, _ref, _results;
+    var issue, stop, url, wl, work_log, _i, _len, _ref, _results;
 
     if (server == null) {
       server = null;
@@ -618,12 +614,12 @@
       $(".cardw").click(function() {
         var issue_id;
 
-        issue_id = working_log.issue_id;
-        renderCards(issue_id);
+        issue_id = $(this).parent().parent().attr("class").replace("work_log_", "");
+        updateWorkingLog(false, parseInt(issue_id));
         return false;
       });
       if (!work_log.end_at) {
-        _results.push(working_log = work_log);
+        _results.push(wl = work_log);
       } else {
         _results.push(void 0);
       }
@@ -810,7 +806,7 @@
   };
 
   working_log = function(issue_id, is_start) {
-    var cond, work_log;
+    var cond;
 
     if (issue_id == null) {
       issue_id = null;
@@ -821,7 +817,7 @@
     cond = {
       end_at: null
     };
-    return work_log = db.one("work_logs", cond);
+    return db.one("work_logs", cond);
   };
 
   window.db = db;

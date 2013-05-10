@@ -108,12 +108,9 @@ renderProjects = () ->
 
 prepareNodeServer = () ->
     if location.href.match("local") and !db.one("servers", {domain: ""}) 
-      console.log location.href
       dbtype = "local"
       url = "/api/users.json"
       $.get(url, (data) ->
-        console.log data
-        console.log "aaa"
         server = db.ins("servers", {
           domain: "",
           user_id: data.id,
@@ -266,7 +263,6 @@ renderCls = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   issue.closed_at = now()
   db.upd("issues", issue)
-  debug "renderCls", issue
   $("#issue_#{issue.id}").fadeOut(200)
 
 renderEdit = (issue_id) ->
@@ -344,12 +340,12 @@ renderWorkLogs = (server=null) ->
       </li>
     """)
     $(".cardw").click(() ->
-      issue_id = working_log.issue_id
-      renderCards(issue_id)
+      issue_id = $(this).parent().parent().attr("class").replace("work_log_", "") 
+      updateWorkingLog(false, parseInt(issue_id))
       return false
     )
     if !work_log.end_at
-      working_log = work_log
+      wl = work_log
 
 renderWorkingLog = () ->
   wl = working_log()
@@ -461,7 +457,7 @@ debug = (title, data) ->
 
 working_log = (issue_id=null, is_start=true) ->
   cond = {end_at: null}
-  work_log = db.one("work_logs", cond)
+  db.one("work_logs", cond)
 
 window.db = db
 

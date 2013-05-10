@@ -6,7 +6,6 @@ http = require('http')
 server = http.createServer(app)
 io = require('socket.io').listen(server)
 
-
 app.get('*', (req, res) ->
   if req.url == "/node_dev"
     node_dev(req, res)
@@ -276,6 +275,5 @@ io.sockets.on('connection', (client)->
     client.broadcast.emit('disconnect',clientId + ' disconnected')
   )
 )
-
 #app.listen(3000)
 server.listen(3000)
