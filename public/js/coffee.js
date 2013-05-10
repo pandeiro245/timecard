@@ -444,7 +444,7 @@
     }
     return umecob({
       use: 'jquery',
-      tpl_id: "./partials/issue.html",
+      tpl: views_issue,
       data: {
         issue: issue,
         title: title,

@@ -236,7 +236,8 @@ renderIssue = (issue, target=null, i = null) ->
   else
     style = ""
 
-  umecob({use: 'jquery', tpl_id: "./partials/issue.html", data:{
+  #umecob({use: 'jquery', tpl_id: "./partials/issue.html", data:{
+  umecob({use: 'jquery', tpl: views_issue, data:{
     issue: issue,
     title: title,
     icon: icon,
