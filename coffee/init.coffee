@@ -95,16 +95,6 @@ renderProjects = () ->
   $("#issues").html("")
   for project in projects
     renderProject(project)
-  hl.enter(".input", (e, target)->
-    title = $(target).val()
-    $project = $(target).parent().parent().parent()
-    project_id = $project.attr("id").replace("project_","")
-    if title.length > 0
-      addIssue(project_id, title)
-      $(target).val("")
-    else
-      alert "please input the title"
-  )
 
 prepareNodeServer = () ->
     if location.href.match("local") and !db.one("servers", {domain: ""}) 
@@ -180,6 +170,17 @@ renderProject = (project) ->
     <div class=\"issues\"></div>
     </div>
   """)
+
+  hl.enter("#project_#{project.id} div div .input", (e, target)->
+    title = $(target).val()
+    $project = $(target).parent().parent().parent()
+    project_id = $project.attr("id").replace("project_","")
+    if title.length > 0
+      addIssue(project_id, title)
+      $(target).val("")
+    else
+      alert "please input the title"
+  )
 
 renderIssues = (issues=null) ->
   issues = db.find("issues",{closed_at: {le: 1}}, {order:{upd_at:"desc"}}) unless issues

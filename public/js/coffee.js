@@ -246,7 +246,7 @@
   };
 
   renderProjects = function() {
-    var project, projects, _i, _len;
+    var project, projects, _i, _len, _results;
 
     projects = db.find("projects", null, {
       order: {
@@ -254,23 +254,12 @@
       }
     });
     $("#issues").html("");
+    _results = [];
     for (_i = 0, _len = projects.length; _i < _len; _i++) {
       project = projects[_i];
-      renderProject(project);
+      _results.push(renderProject(project));
     }
-    return hl.enter(".input", function(e, target) {
-      var $project, project_id, title;
-
-      title = $(target).val();
-      $project = $(target).parent().parent().parent();
-      project_id = $project.attr("id").replace("project_", "");
-      if (title.length > 0) {
-        addIssue(project_id, title);
-        return $(target).val("");
-      } else {
-        return alert("please input the title");
-      }
-    });
+    return _results;
   };
 
   prepareNodeServer = function() {
@@ -350,7 +339,20 @@
   };
 
   renderProject = function(project) {
-    return $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div class=\"issues\"></div>\n</div>");
+    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div class=\"issues\"></div>\n</div>");
+    return hl.enter("#project_" + project.id + " div div .input", function(e, target) {
+      var $project, project_id, title;
+
+      title = $(target).val();
+      $project = $(target).parent().parent().parent();
+      project_id = $project.attr("id").replace("project_", "");
+      if (title.length > 0) {
+        addIssue(project_id, title);
+        return $(target).val("");
+      } else {
+        return alert("please input the title");
+      }
+    });
   };
 
   renderIssues = function(issues) {
