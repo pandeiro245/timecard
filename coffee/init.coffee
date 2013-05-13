@@ -356,6 +356,7 @@ renderWorkingLog = () ->
     $(".work_log_#{wl.id} .time").html(time)
     $("#issue_#{wl.issue_id} h2 .time").html("(#{time})")
     $("#issue_#{wl.issue_id} div div .card").html("Stop")
+  $("title").html(time)
 
 loopRenderWorkLogs = () ->
   renderWorkingLog()

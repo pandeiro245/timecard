@@ -637,8 +637,9 @@
       time = dispTime(wl);
       $(".work_log_" + wl.id + " .time").html(time);
       $("#issue_" + wl.issue_id + " h2 .time").html("(" + time + ")");
-      return $("#issue_" + wl.issue_id + " div div .card").html("Stop");
+      $("#issue_" + wl.issue_id + " div div .card").html("Stop");
     }
+    return $("title").html(time);
   };
 
   loopRenderWorkLogs = function() {
