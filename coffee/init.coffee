@@ -38,12 +38,9 @@ fetch = (server) ->
   }
   debug "fetch diffs", diffs
   url = "#{domain}/api/v1/diffs.json"
+
   $.post(url, params, (data) ->
-    wlsis = db.one("infos", {key: "working_log_server_ids"})
-    wlsis = db.ins("infos", {key: "working_log_server_ids"}) unless wlsis
-    if data.working_log_server_ids
-      wlsis.val = data.working_log_server_ids.join(",")
-    db.upd("infos", wlsis)
+    updtWorkLogServerIds(data)
     sync(server, "server_ids", data.server_ids)
     sync(server, "projects", data.projects)
     sync(server, "issues", data.issues)
@@ -51,6 +48,13 @@ fetch = (server) ->
     renderWorkLogs(server)
     last_fetch(now())
   )
+
+updtWorkLogServerIds = (data) ->
+  if data.working_log_server_ids
+    wlsis = db.one("infos", {key: "working_log_server_ids"})
+    wlsis = db.ins("infos", {key: "working_log_server_ids"}) unless wlsis
+    wlsis.val = data.working_log_server_ids.join(",")
+    db.upd("infos", wlsis)
 
 sync = (server, table_name, data) ->
   if table_name == "server_ids"

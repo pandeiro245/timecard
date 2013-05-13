@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero;
 
   init = function() {
     prepareAddServer();
@@ -146,6 +146,20 @@
     debug("fetch diffs", diffs);
     url = "" + domain + "/api/v1/diffs.json";
     return $.post(url, params, function(data) {
+      updtWorkLogServerIds(data);
+      sync(server, "server_ids", data.server_ids);
+      sync(server, "projects", data.projects);
+      sync(server, "issues", data.issues);
+      sync(server, "work_logs", data.work_logs);
+      renderWorkLogs(server);
+      return last_fetch(now());
+    });
+  };
+
+  updtWorkLogServerIds = function(data) {
+    var wlsis;
+
+    if (data.working_log_server_ids) {
       wlsis = db.one("infos", {
         key: "working_log_server_ids"
       });
@@ -154,17 +168,9 @@
           key: "working_log_server_ids"
         });
       }
-      if (data.working_log_server_ids) {
-        wlsis.val = data.working_log_server_ids.join(",");
-      }
-      db.upd("infos", wlsis);
-      sync(server, "server_ids", data.server_ids);
-      sync(server, "projects", data.projects);
-      sync(server, "issues", data.issues);
-      sync(server, "work_logs", data.work_logs);
-      renderWorkLogs(server);
-      return last_fetch(now());
-    });
+      wlsis.val = data.working_log_server_ids.join(",");
+      return db.upd("infos", wlsis);
+    }
   };
 
   sync = function(server, table_name, data) {

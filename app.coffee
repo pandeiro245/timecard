@@ -39,7 +39,6 @@ api = (req, res) ->
     body = JSON.stringify(callback())
   else
     body = JSON.stringify({id: req.query["id"]})
-  #res.setHeader('Content-Type', 'application/json')
   res.setHeader('Content-Type', 'text/json')
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Content-Length', body.length)
@@ -47,9 +46,10 @@ api = (req, res) ->
 
 save_diffs = (data) ->
   server = null
-  sync(server, "projects", data.diffs.projects)
-  sync(server, "issues", data.diffs.issues)
-  sync(server, "work_logs", data.diffs.work_logs)
+  if data.diffs
+    sync(server, "projects", data.diffs.projects)
+    sync(server, "issues", data.diffs.issues)
+    sync(server, "work_logs", data.diffs.work_logs)
 
 schema = {
   servers: {
@@ -148,7 +148,7 @@ sync_item = (server, table_name, i) ->
   if i.project_id
     i.project_id = db.one("projects", {server_id: parseInt(i.project_id)}).id
   if i.issue_id
-    issue = db.one("issues", {server_id: praseInt(i.issue_id)})
+    issue = db.one("issues", {server_id: parseInt(i.issue_id)})
     if issue
       i.issue_id = issue.id
     if i.closed_at > 0

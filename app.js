@@ -69,9 +69,11 @@
 
   save_diffs = function(data) {
     server = null;
-    sync(server, "projects", data.diffs.projects);
-    sync(server, "issues", data.diffs.issues);
-    return sync(server, "work_logs", data.diffs.work_logs);
+    if (data.diffs) {
+      sync(server, "projects", data.diffs.projects);
+      sync(server, "issues", data.diffs.issues);
+      return sync(server, "work_logs", data.diffs.work_logs);
+    }
   };
 
   schema = {
@@ -212,7 +214,7 @@
     }
     if (i.issue_id) {
       issue = db.one("issues", {
-        server_id: praseInt(i.issue_id)
+        server_id: parseInt(i.issue_id)
       });
       if (issue) {
         i.issue_id = issue.id;
