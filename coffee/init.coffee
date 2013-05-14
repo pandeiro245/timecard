@@ -2,6 +2,8 @@ init = () ->
   #prepareNodeServer()
   prepareAddServer()
   prepareAddProject()
+  prepareDoExport()
+  prepareDoImport()
   renderProjects()
   renderIssues()
   renderWorkLogs()
@@ -158,6 +160,53 @@ prepareAddProject = () ->
     else
       alert "please input the title of project and issue."
   )
+
+prepareDoExport = () ->
+  hl.click(".do_export", (e, target)->
+    result = {
+      projects: db.find("projects"),
+      issues: db.find("issues"),
+      work_logs: db.find("work_logs"),
+      servers: db.find("servers"),
+      infos: db.find("infos"),
+    }
+    blob = new Blob([JSON.stringify(result)])
+    url = window.URL.createObjectURL(blob)
+    d = new Date()
+    caseTitle = "Timecard"
+    title = caseTitle + "_" + d.getFullYear() + zp(d.getMonth()+1) + d.getDate() + ".json"
+    a = $('<a></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).addClass("btn-primary")
+    $(".do_export").after(a)
+    return false
+  )
+prepareDoImport = () ->
+  hl.click(".do_import", (e, target)->
+    datafile = $("#import_file").get(0).files[0]
+    unless datafile
+      alert "please select import file"
+      return false
+    bool = confirm("import delete your data are you OK?")
+    return false unless bool
+    reader = new FileReader()
+    reader.onload = (evt) ->
+      json = JSON.parse(evt.target.result)
+      result = doImport(json)
+      if result
+        alert "import is done."
+        location.reload()
+      else
+        alert "import is failed."
+    reader.readAsText(datafile, 'utf-8')
+    return false
+  )
+
+doImport = (json) ->
+  for table_name, data of json
+    db.del(table_name)
+    for item in data
+      debug table_name, item
+      db.ins(table_name, item)
+  return true
 
 renderProject = (project) ->
   $("#issues").append("""
@@ -477,15 +526,18 @@ forUploadWorkLog = (work_log) ->
   delete work_log.id
   return work_log
 
-debug = (title, data) ->
+debug = (title, data=null) ->
   console.log title
-  console.log data
+  console.log data if data
 
 working_log = (issue_id=null, is_start=true) ->
   cond = {end_at: null}
   db.one("work_logs", cond)
 
 window.db = db
+
+zp = (n) ->
+  if n >= 10 then n else '0' + n
 
 $(() ->
   init()

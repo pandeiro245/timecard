@@ -84,11 +84,13 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     prepareAddServer();
     prepareAddProject();
+    prepareDoExport();
+    prepareDoImport();
     renderProjects();
     renderIssues();
     renderWorkLogs();
@@ -342,6 +344,74 @@
         return alert("please input the title of project and issue.");
       }
     });
+  };
+
+  prepareDoExport = function() {
+    return hl.click(".do_export", function(e, target) {
+      var a, blob, caseTitle, d, result, title, url;
+
+      result = {
+        projects: db.find("projects"),
+        issues: db.find("issues"),
+        work_logs: db.find("work_logs"),
+        servers: db.find("servers"),
+        infos: db.find("infos")
+      };
+      blob = new Blob([JSON.stringify(result)]);
+      url = window.URL.createObjectURL(blob);
+      d = new Date();
+      caseTitle = "Timecard";
+      title = caseTitle + "_" + d.getFullYear() + zp(d.getMonth() + 1) + d.getDate() + ".json";
+      a = $('<a></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).addClass("btn-primary");
+      $(".do_export").after(a);
+      return false;
+    });
+  };
+
+  prepareDoImport = function() {
+    return hl.click(".do_import", function(e, target) {
+      var bool, datafile, reader;
+
+      datafile = $("#import_file").get(0).files[0];
+      if (!datafile) {
+        alert("please select import file");
+        return false;
+      }
+      bool = confirm("import delete your data are you OK?");
+      if (!bool) {
+        return false;
+      }
+      reader = new FileReader();
+      reader.onload = function(evt) {
+        var json, result;
+
+        json = JSON.parse(evt.target.result);
+        result = doImport(json);
+        if (result) {
+          alert("import is done.");
+          return location.reload();
+        } else {
+          return alert("import is failed.");
+        }
+      };
+      reader.readAsText(datafile, 'utf-8');
+      return false;
+    });
+  };
+
+  doImport = function(json) {
+    var data, item, table_name, _i, _len;
+
+    for (table_name in json) {
+      data = json[table_name];
+      db.del(table_name);
+      for (_i = 0, _len = data.length; _i < _len; _i++) {
+        item = data[_i];
+        debug(table_name, item);
+        db.ins(table_name, item);
+      }
+    }
+    return true;
   };
 
   renderProject = function(project) {
@@ -840,8 +910,13 @@
   };
 
   debug = function(title, data) {
+    if (data == null) {
+      data = null;
+    }
     console.log(title);
-    return console.log(data);
+    if (data) {
+      return console.log(data);
+    }
   };
 
   working_log = function(issue_id, is_start) {
@@ -860,6 +935,14 @@
   };
 
   window.db = db;
+
+  zp = function(n) {
+    if (n >= 10) {
+      return n;
+    } else {
+      return '0' + n;
+    }
+  };
 
   $(function() {
     return init();
