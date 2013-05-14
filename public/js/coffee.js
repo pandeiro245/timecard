@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispTime, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     prepareAddServer();
@@ -362,41 +362,55 @@
       d = new Date();
       caseTitle = "Timecard";
       title = caseTitle + "_" + d.getFullYear() + zp(d.getMonth() + 1) + d.getDate() + ".json";
-      a = $('<a></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).addClass("btn-primary");
+      a = $('<a id="download"></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).hide();
       $(".do_export").after(a);
+      console.log($("#download")[0]);
+      $("#download")[0].click();
       return false;
     });
   };
 
   prepareDoImport = function() {
-    return hl.click(".do_import", function(e, target) {
-      var bool, datafile, reader;
+    hl.click(".do_import", function(e, target) {
+      var datafile;
 
       datafile = $("#import_file").get(0).files[0];
-      if (!datafile) {
-        alert("please select import file");
-        return false;
+      if (datafile) {
+        return checkImport(datafile);
+      } else {
+        return $("#import_file").click();
       }
-      bool = confirm("import delete your data are you OK?");
-      if (!bool) {
-        return false;
-      }
-      reader = new FileReader();
-      reader.onload = function(evt) {
-        var json, result;
-
-        json = JSON.parse(evt.target.result);
-        result = doImport(json);
-        if (result) {
-          alert("import is done.");
-          return location.reload();
-        } else {
-          return alert("import is failed.");
-        }
-      };
-      reader.readAsText(datafile, 'utf-8');
-      return false;
     });
+    return $("#import_file").change(function() {
+      var datafile;
+
+      datafile = $("#import_file").get(0).files[0];
+      if (datafile) {
+        return checkImport(datafile);
+      } else {
+        return alert("invalid data.");
+      }
+    });
+  };
+
+  checkImport = function(datafile) {
+    var reader;
+
+    reader = new FileReader();
+    reader.onload = function(evt) {
+      var json, result;
+
+      json = JSON.parse(evt.target.result);
+      result = doImport(json);
+      if (result) {
+        alert("import is done.");
+        return location.reload();
+      } else {
+        return alert("import is failed.");
+      }
+    };
+    reader.readAsText(datafile, 'utf-8');
+    return false;
   };
 
   doImport = function(json) {

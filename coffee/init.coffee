@@ -175,30 +175,43 @@ prepareDoExport = () ->
     d = new Date()
     caseTitle = "Timecard"
     title = caseTitle + "_" + d.getFullYear() + zp(d.getMonth()+1) + d.getDate() + ".json"
-    a = $('<a></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).addClass("btn-primary")
+
+    a = $('<a id="download"></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).hide()
     $(".do_export").after(a)
+    console.log $("#download")[0]
+    $("#download")[0].click()
     return false
   )
+
 prepareDoImport = () ->
   hl.click(".do_import", (e, target)->
     datafile = $("#import_file").get(0).files[0]
-    unless datafile
-      alert "please select import file"
-      return false
-    bool = confirm("import delete your data are you OK?")
-    return false unless bool
-    reader = new FileReader()
-    reader.onload = (evt) ->
-      json = JSON.parse(evt.target.result)
-      result = doImport(json)
-      if result
-        alert "import is done."
-        location.reload()
-      else
-        alert "import is failed."
-    reader.readAsText(datafile, 'utf-8')
-    return false
+    if datafile
+      checkImport(datafile)
+    else
+      $("#import_file").click()
   )
+
+  $("#import_file").change(()->
+    datafile = $("#import_file").get(0).files[0]
+    if datafile
+      checkImport(datafile)
+    else
+      alert "invalid data."
+  )
+
+checkImport = (datafile) ->
+  reader = new FileReader()
+  reader.onload = (evt) ->
+    json = JSON.parse(evt.target.result)
+    result = doImport(json)
+    if result
+      alert "import is done."
+      location.reload()
+    else
+      alert "import is failed."
+  reader.readAsText(datafile, 'utf-8')
+  return false
 
 doImport = (json) ->
   for table_name, data of json
