@@ -228,12 +228,13 @@ renderProject = (project) ->
     <h1>
       #{project.name}#{if project.server_id then "" else uicon}
     </h1>
+    <div class=\"issues\"></div>
     <div class=\"input-append\"> 
       <input type=\"text\" class=\"input\" />
       <input type=\"submit\" value=\"add issue\" class=\"btn\" />
     </div>
     </div>
-    <div class=\"issues\"></div>
+
     </div>
   """)
 
