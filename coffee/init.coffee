@@ -355,8 +355,11 @@ renderCls = (issue_id) ->
 renderEdit = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   issue.title = prompt('issue title', issue.title)
-  db.upd("issues", issue)
-  $("#issue_#{issue.id} h2").html(issue.title)
+  if issue.title.length > 1
+    db.upd("issues", issue)
+    $("#issue_#{issue.id} h2").html(issue.title)
+  else
+    alert "please input title more than 2 chars"
 
 renderCards = (issue_id = null) ->
   updateWorkingLog(null, issue_id)

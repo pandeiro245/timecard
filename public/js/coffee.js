@@ -615,8 +615,12 @@
       id: issue_id
     });
     issue.title = prompt('issue title', issue.title);
-    db.upd("issues", issue);
-    return $("#issue_" + issue.id + " h2").html(issue.title);
+    if (issue.title.length > 1) {
+      db.upd("issues", issue);
+      return $("#issue_" + issue.id + " h2").html(issue.title);
+    } else {
+      return alert("please input title more than 2 chars");
+    }
   };
 
   renderCards = function(issue_id) {
