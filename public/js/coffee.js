@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero;
+  var addIssue, addProject, db, debug, dispTime, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero;
 
   init = function() {
     prepareAddServer();
@@ -346,7 +346,7 @@
 
   renderProject = function(project) {
     $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n<div class=\"issues\"></div>\n</div>");
-    return hl.enter("#project_" + project.id + " div div .input", function(e, target) {
+    hl.enter("#project_" + project.id + " div div .input", function(e, target) {
       var $project, project_id, title;
 
       title = $(target).val();
@@ -357,6 +357,24 @@
         return $(target).val("");
       } else {
         return alert("please input the title");
+      }
+    });
+    return $("#project_" + project.id + " div h1").droppable({
+      over: function(event, ui) {
+        return $(this).css("background", "#fc0");
+      },
+      out: function(event, ui) {
+        return $(this).css("background", "#efe");
+      },
+      drop: function(event, ui) {
+        var issue;
+
+        issue = db.one("issues", {
+          id: window.dragging_issue_id
+        });
+        issue.project_id = project.id;
+        db.upd("issues", issue);
+        return location.reload();
       }
     });
   };
@@ -468,7 +486,19 @@
         $project_issues.prepend(html);
       }
       $("issue_" + issue.id).hide().fadeIn(200);
-      return prepareCards(issue.id);
+      prepareCards(issue.id);
+      return prepareDD(issue.id);
+    });
+  };
+
+  prepareDD = function(issue_id) {
+    var $issue;
+
+    $issue = $("#issue_" + issue_id);
+    return $issue.draggable({
+      drag: function() {
+        return window.dragging_issue_id = issue_id;
+      }
     });
   };
 

@@ -19,18 +19,6 @@ app.post('*', (req, res) ->
   api(req, res)
 )
 
-node_dev = (req, res)->
-  body = "<a href=\"/\">back</a>"
-  body += "<hr />"
-  for i in req
-    body += i + ' is ' + req[i]
-    body += "<br />"
-  body += "<hr />"
-  body += "<a href=\"/\">back</a>"
-  res.setHeader('Content-Type', 'text/html')
-  res.setHeader('Content-Length', body.length)
-  res.end(body)
-
 api = (req, res) ->
   if req.url.match("users")
     body = JSON.stringify({id: 1})
@@ -276,4 +264,19 @@ io.sockets.on('connection', (client)->
   )
 )
 #app.listen(3000)
+
+node_dev = (req, res)->
+  body = "<a href=\"/\">back</a>"
+  body += "<hr />"
+  console.log req
+  for i in req
+    body += i + ' is ' + req[i]
+    body += "<br />"
+  body += "<hr />"
+  body += "<a href=\"/\">back</a>"
+  res.setHeader('Content-Type', 'text/html')
+  res.setHeader('Content-Length', body.length)
+  res.end(body)
+
+
 server.listen(3000)

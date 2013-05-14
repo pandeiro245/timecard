@@ -185,6 +185,18 @@ renderProject = (project) ->
     else
       alert "please input the title"
   )
+  $("#project_#{project.id} div h1").droppable({
+    over: (event, ui) ->
+      $(this).css("background", "#fc0")
+    ,
+    out: (event, ui) ->
+      $(this).css("background", "#efe")
+    drop: (event, ui) ->
+      issue = db.one("issues", {id: window.dragging_issue_id})
+      issue.project_id = project.id
+      db.upd("issues", issue)
+      location.reload()
+  })
 
 renderIssues = (issues=null) ->
   issues = db.find("issues",{closed_at: {le: 1}}, {order:{upd_at:"desc"}}) unless issues
@@ -256,8 +268,15 @@ renderIssue = (issue, target=null, i = null) ->
       $project_issues.prepend(html)
     $("issue_#{issue.id}").hide().fadeIn(200)
     prepareCards(issue.id)
-
+    prepareDD(issue.id)
   )
+
+prepareDD = (issue_id) ->
+  $issue = $("#issue_#{issue_id}")
+  $issue.draggable({
+    drag: ()->
+      window.dragging_issue_id = issue_id
+  })
 
 renderDdt = (issue_id) ->
   issue = db.one("issues", {id: issue_id})

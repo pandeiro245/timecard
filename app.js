@@ -29,23 +29,6 @@
     return api(req, res);
   });
 
-  node_dev = function(req, res) {
-    var body, i, _i, _len;
-
-    body = "<a href=\"/\">back</a>";
-    body += "<hr />";
-    for (_i = 0, _len = req.length; _i < _len; _i++) {
-      i = req[_i];
-      body += i + ' is ' + req[i];
-      body += "<br />";
-    }
-    body += "<hr />";
-    body += "<a href=\"/\">back</a>";
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Content-Length', body.length);
-    return res.end(body);
-  };
-
   api = function(req, res) {
     var body;
 
@@ -429,6 +412,24 @@
       return client.broadcast.emit('disconnect', clientId + ' disconnected');
     });
   });
+
+  node_dev = function(req, res) {
+    var body, i, _i, _len;
+
+    body = "<a href=\"/\">back</a>";
+    body += "<hr />";
+    console.log(req);
+    for (_i = 0, _len = req.length; _i < _len; _i++) {
+      i = req[_i];
+      body += i + ' is ' + req[i];
+      body += "<br />";
+    }
+    body += "<hr />";
+    body += "<a href=\"/\">back</a>";
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Length', body.length);
+    return res.end(body);
+  };
 
   server.listen(3000);
 
