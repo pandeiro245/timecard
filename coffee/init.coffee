@@ -8,6 +8,7 @@ init = () ->
   renderProjects()
   renderIssues()
   renderWorkLogs()
+  renderCalendars()
   loopRenderWorkLogs()
   loopFetch()
 
@@ -99,7 +100,7 @@ sync_item = (server, table_name, i) ->
     item = db.ins(table_name, i)
 
 renderProjects = () ->
-  projects = db.find("projects", null, {order: {id: "asc"}})
+  projects = db.find("projects", null, {order: {upd_at: "desc"}})
   $("#issues").html("")
   for project in projects
     renderProject(project)
@@ -394,6 +395,15 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
   if wl && issue_id
     wl.end_at = now()
     db.upd("work_logs", wl)
+
+    issue = db.one("issues", {id: issue_id})
+    issue.upd_at = now()
+    project = db.one("projects", {id: issue.project_id})
+    project.upd_at = now()
+    db.upd("issues", issue)
+    db.upd("projects", project)
+    console.log issue
+    console.log project
   if is_start == null
     if wl && parseInt(wl.issue_id) == parseInt(issue_id)
       is_start = false
@@ -401,6 +411,7 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
       is_start = true
   if is_start && issue_id
     db.ins("work_logs", {issue_id: issue_id, started_at: now()})
+
   issue_id = working_log().issue_id if working_log()
   if working_log()
     $("#issue_#{issue_id} .card").html("Stop")
@@ -452,6 +463,31 @@ renderWorkLogs = (server=null) ->
     )
     if !work_log.end_at
       wl = work_log
+
+renderCalendars = () ->
+  now = new Date()
+  year = now.getYear() + 1900
+  mon = now.getMonth() + 1
+  renderCalendar("this_month", now)
+  now = new Date(year, mon, 1)
+  renderCalendar("next_month", now)
+
+renderCalendar = (key, now) ->
+  year = now.getYear() + 1900
+  mon = now.getMonth() + 1
+  day = now.getDate()
+  wday = now.getDay()
+  start = wday - day%7 -1
+  w = 1
+  $(".#{key} h2").html("#{year}-#{zp(mon)}")
+  for i in [1..31]
+    d = (i + start)%7 + 1
+    $day = $(".#{key} table .w#{w} .d#{d}")
+    $day.html(i).addClass("day#{i}")
+    $day.css("background", "#fc0") if i == day && key == "this_month"
+    w += 1 if d == 7
+
+
 
 renderWorkingLog = () ->
   wl = working_log()

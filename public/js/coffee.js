@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     prepareAddServer();
@@ -95,6 +95,7 @@
     renderProjects();
     renderIssues();
     renderWorkLogs();
+    renderCalendars();
     loopRenderWorkLogs();
     return loopFetch();
   };
@@ -263,7 +264,7 @@
 
     projects = db.find("projects", null, {
       order: {
-        id: "asc"
+        upd_at: "desc"
       }
     });
     $("#issues").html("");
@@ -661,7 +662,7 @@
   };
 
   updateWorkingLog = function(is_start, issue_id) {
-    var wl;
+    var issue, project, wl;
 
     if (is_start == null) {
       is_start = null;
@@ -676,6 +677,18 @@
     if (wl && issue_id) {
       wl.end_at = now();
       db.upd("work_logs", wl);
+      issue = db.one("issues", {
+        id: issue_id
+      });
+      issue.upd_at = now();
+      project = db.one("projects", {
+        id: issue.project_id
+      });
+      project.upd_at = now();
+      db.upd("issues", issue);
+      db.upd("projects", project);
+      console.log(issue);
+      console.log(project);
     }
     if (is_start === null) {
       if (wl && parseInt(wl.issue_id) === parseInt(issue_id)) {
@@ -768,6 +781,44 @@
       });
       if (!work_log.end_at) {
         _results.push(wl = work_log);
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  renderCalendars = function() {
+    var mon, now, year;
+
+    now = new Date();
+    year = now.getYear() + 1900;
+    mon = now.getMonth() + 1;
+    renderCalendar("this_month", now);
+    now = new Date(year, mon, 1);
+    return renderCalendar("next_month", now);
+  };
+
+  renderCalendar = function(key, now) {
+    var $day, d, day, i, mon, start, w, wday, year, _i, _results;
+
+    year = now.getYear() + 1900;
+    mon = now.getMonth() + 1;
+    day = now.getDate();
+    wday = now.getDay();
+    start = wday - day % 7 - 1;
+    w = 1;
+    $("." + key + " h2").html("" + year + "-" + (zp(mon)));
+    _results = [];
+    for (i = _i = 1; _i <= 31; i = ++_i) {
+      d = (i + start) % 7 + 1;
+      $day = $("." + key + " table .w" + w + " .d" + d);
+      $day.html(i).addClass("day" + i);
+      if (i === day && key === "this_month") {
+        $day.css("background", "#fc0");
+      }
+      if (d === 7) {
+        _results.push(w += 1);
       } else {
         _results.push(void 0);
       }
