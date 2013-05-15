@@ -24,7 +24,7 @@ window.schema = {
     closed_at: 0,
     user_id: 0,
     assignee_id: 0,
-    will_start_on: "",
+    will_start_at: 0,
     parent_id:0,
     //$uniques: "server_id"
   },

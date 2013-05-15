@@ -224,6 +224,7 @@ doImport = (json) ->
 
 
 prepareDoCheckedDdt = () ->
+  #$(".do_checked_ddt").hide()
   $(".do_checked_ddt").click(() ->
     $checked = $("input:checkbox:checked")
     if $checked.length == 0
@@ -232,6 +233,8 @@ prepareDoCheckedDdt = () ->
       for i in $checked
         $(i).parent().parent().parent().find(".btn-toolbar").find(".btn-group").find(".ddt").click()
   )
+
+
 
 renderProject = (project) ->
   $("#issues").append("""
@@ -278,10 +281,10 @@ renderIssues = (issues=null) ->
   $(".issues").html("")
   i = 1
   for issue in issues
-    if !issue.is_ddt && !issue.will_start_on
+    if !issue.will_start_at or issue.will_start_at < now()
       renderIssue(issue, null, i)
     i = i + 0
-  renderCards()
+  doCards()
 
 prepareCards = (issue_id) ->
   $(() ->
@@ -291,19 +294,19 @@ prepareCards = (issue_id) ->
       return false
     )
     $("#issue_#{issue_id} div div .card").click(() ->
-      renderCards(issue_id)
+      doCards(issue_id)
       return false
     )
     $("#issue_#{issue_id} div div .ddt").click(() ->
-      renderDdt(issue_id)
+      doDdt(issue_id)
       return false
     )
     $("#issue_#{issue_id} div div .cls").click(() ->
-      renderCls(issue_id)
+      doCls(issue_id)
       return false
     )
     $("#issue_#{issue_id} div div .edit").click(() ->
-      renderEdit(issue_id)
+      doEdit(issue_id)
       return false
     )
   )
@@ -353,19 +356,19 @@ prepareDD = (issue_id) ->
       window.dragging_issue_id = issue_id
   })
 
-renderDdt = (issue_id) ->
+doDdt = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
-  issue.is_ddt = true
+  issue.will_start_at = now() + 12*3600
   db.upd("issues", issue)
   $("#issue_#{issue.id}").fadeOut(200)
 
-renderCls = (issue_id) ->
+doCls = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   issue.closed_at = now()
   db.upd("issues", issue)
   $("#issue_#{issue.id}").fadeOut(200)
 
-renderEdit = (issue_id) ->
+doEdit = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   issue.title = prompt('issue title', issue.title)
   if issue.title.length > 1
@@ -374,7 +377,7 @@ renderEdit = (issue_id) ->
   else
     alert "please input title more than 2 chars"
 
-renderCards = (issue_id = null) ->
+doCards = (issue_id = null) ->
   updateWorkingLog(null, issue_id)
 
 startWorkLog = (issue_id) ->

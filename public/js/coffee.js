@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispTime, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     prepareAddServer();
@@ -503,12 +503,12 @@
     i = 1;
     for (_i = 0, _len = issues.length; _i < _len; _i++) {
       issue = issues[_i];
-      if (!issue.is_ddt && !issue.will_start_on) {
+      if (!issue.will_start_at || issue.will_start_at < now()) {
         renderIssue(issue, null, i);
       }
       i = i + 0;
     }
-    return renderCards();
+    return doCards();
   };
 
   prepareCards = function(issue_id) {
@@ -521,19 +521,19 @@
         return false;
       });
       $("#issue_" + issue_id + " div div .card").click(function() {
-        renderCards(issue_id);
+        doCards(issue_id);
         return false;
       });
       $("#issue_" + issue_id + " div div .ddt").click(function() {
-        renderDdt(issue_id);
+        doDdt(issue_id);
         return false;
       });
       $("#issue_" + issue_id + " div div .cls").click(function() {
-        renderCls(issue_id);
+        doCls(issue_id);
         return false;
       });
       return $("#issue_" + issue_id + " div div .edit").click(function() {
-        renderEdit(issue_id);
+        doEdit(issue_id);
         return false;
       });
     });
@@ -605,18 +605,18 @@
     });
   };
 
-  renderDdt = function(issue_id) {
+  doDdt = function(issue_id) {
     var issue;
 
     issue = db.one("issues", {
       id: issue_id
     });
-    issue.is_ddt = true;
+    issue.will_start_at = now() + 12 * 3600;
     db.upd("issues", issue);
     return $("#issue_" + issue.id).fadeOut(200);
   };
 
-  renderCls = function(issue_id) {
+  doCls = function(issue_id) {
     var issue;
 
     issue = db.one("issues", {
@@ -627,7 +627,7 @@
     return $("#issue_" + issue.id).fadeOut(200);
   };
 
-  renderEdit = function(issue_id) {
+  doEdit = function(issue_id) {
     var issue;
 
     issue = db.one("issues", {
@@ -642,7 +642,7 @@
     }
   };
 
-  renderCards = function(issue_id) {
+  doCards = function(issue_id) {
     if (issue_id == null) {
       issue_id = null;
     }
