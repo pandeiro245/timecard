@@ -62,11 +62,12 @@ updtWorkLogServerIds = (data) ->
 sync = (server, table_name, data) ->
   if table_name == "server_ids"
     for table_name, server_ids of data
-      for local_id, server_id of server_ids
-        item = db.one(table_name, {id: local_id})
-        if item
-          item.server_id = server_id
-          db.upd(table_name, item)
+      if server_ids and server_ids[0]
+        for local_id, aserver of server_ids
+          item = db.one(table_name, {id: local_id})
+          if item
+            item.server_id = aserver.id
+            db.upd(table_name, item)
   else
     if data
       for i in data
@@ -218,7 +219,6 @@ doImport = (json) ->
   for table_name, data of json
     db.del(table_name)
     for item in data
-      debug table_name, item
       db.ins(table_name, item)
   return true
 

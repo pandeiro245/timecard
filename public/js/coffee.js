@@ -177,30 +177,34 @@
   };
 
   sync = function(server, table_name, data) {
-    var i, item, local_id, server_id, server_ids, _i, _len, _results, _results1;
+    var aserver, i, item, local_id, server_ids, _i, _len, _results, _results1;
 
     if (table_name === "server_ids") {
       _results = [];
       for (table_name in data) {
         server_ids = data[table_name];
-        _results.push((function() {
-          var _results1;
+        if (server_ids && server_ids[0]) {
+          _results.push((function() {
+            var _results1;
 
-          _results1 = [];
-          for (local_id in server_ids) {
-            server_id = server_ids[local_id];
-            item = db.one(table_name, {
-              id: local_id
-            });
-            if (item) {
-              item.server_id = server_id;
-              _results1.push(db.upd(table_name, item));
-            } else {
-              _results1.push(void 0);
+            _results1 = [];
+            for (local_id in server_ids) {
+              aserver = server_ids[local_id];
+              item = db.one(table_name, {
+                id: local_id
+              });
+              if (item) {
+                item.server_id = aserver.id;
+                _results1.push(db.upd(table_name, item));
+              } else {
+                _results1.push(void 0);
+              }
             }
-          }
-          return _results1;
-        })());
+            return _results1;
+          })());
+        } else {
+          _results.push(void 0);
+        }
       }
       return _results;
     } else {
@@ -422,7 +426,6 @@
       db.del(table_name);
       for (_i = 0, _len = data.length; _i < _len; _i++) {
         item = data[_i];
-        debug(table_name, item);
         db.ins(table_name, item);
       }
     }
