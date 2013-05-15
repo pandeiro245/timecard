@@ -44,6 +44,7 @@ fetch = (server) ->
   url = "#{domain}/api/v1/diffs.json"
 
   $.post(url, params, (data) ->
+    debug "callback data", data # crowdsourcing.dev へのアクセスは表示されるが localhost:3000は表示されない（リクエストはされているのに）
     updtWorkLogServerIds(data)
     sync(server, "server_ids", data.server_ids)
     sync(server, "projects", data.projects)

@@ -150,6 +150,7 @@
     debug("fetch diffs", diffs);
     url = "" + domain + "/api/v1/diffs.json";
     return $.post(url, params, function(data) {
+      debug("callback data", data);
       updtWorkLogServerIds(data);
       sync(server, "server_ids", data.server_ids);
       sync(server, "projects", data.projects);

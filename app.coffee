@@ -27,7 +27,7 @@ api = (req, res) ->
     body = JSON.stringify(callback())
   else
     body = JSON.stringify({id: req.query["id"]})
-  res.setHeader('Content-Type', 'text/json')
+  res.setHeader('Content-Type', 'application/json')
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Content-Length', body.length)
   res.end(body)
@@ -128,6 +128,7 @@ sync = (server, table_name, data) ->
         item.server_id = server_id
         db.upd(table_name, item)
   else
+    console.log data
     if data
       for i in data
         sync_item(server, table_name, i)

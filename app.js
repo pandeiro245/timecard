@@ -44,7 +44,7 @@
         id: req.query["id"]
       });
     }
-    res.setHeader('Content-Type', 'text/json');
+    res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Length', body.length);
     return res.end(body);
@@ -176,6 +176,7 @@
       }
       return _results;
     } else {
+      console.log(data);
       if (data) {
         _results1 = [];
         for (_i = 0, _len = data.length; _i < _len; _i++) {
