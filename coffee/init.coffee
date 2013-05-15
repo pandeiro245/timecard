@@ -450,12 +450,21 @@ renderWorkLogs = (server=null) ->
         </div>
       """
     $("#work_logs").append("""
-      <li class=\"work_log_#{work_log.id}\">
+      <tr class=\"work_log_#{work_log.id}\">
+      <td>
       #{issue.title}
+      </td>
+      <td>
+      #{dispDate(work_log)}
+      </td>
+      <td>
       <span class=\"time\">#{dispTime(work_log)}</span>
+      </td>
+      <td>
       #{if work_log.server_id then "" else uicon}
-      #{stop}</div>
-      </li>
+      #{stop}
+      </td>
+      </tr>
     """)
     $(".cardw").click(() ->
       issue_id = $(this).parent().parent().attr("class").replace("work_log_", "") 
@@ -533,6 +542,12 @@ dispTime = (work_log) ->
   else
     res = "#{sec}秒"
   res
+
+dispDate = (work_log) ->
+  time = new Date(work_log.started_at*1000)
+  console.log time
+  "#{time.getMonth()+1}/#{time.getDate()}"
+
 
 setInfo = (key, val) ->
   info = db.one("infos", {key: key})

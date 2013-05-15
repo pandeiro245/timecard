@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     prepareAddServer();
@@ -772,7 +772,7 @@
       if (!work_log.end_at) {
         stop = "<div style=\"padding:10px;\">\n<a href=\"#\" class=\"cardw btn btn-warning\">STOP</a>\n</div>";
       }
-      $("#work_logs").append("<li class=\"work_log_" + work_log.id + "\">\n" + issue.title + "\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n" + (work_log.server_id ? "" : uicon) + "\n" + stop + "</div>\n</li>");
+      $("#work_logs").append("<tr class=\"work_log_" + work_log.id + "\">\n<td>\n" + issue.title + "\n</td>\n<td>\n" + (dispDate(work_log)) + "\n</td>\n<td>\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n</td>\n<td>\n" + (work_log.server_id ? "" : uicon) + "\n" + stop + "\n</td>\n</tr>");
       $(".cardw").click(function() {
         var issue_id;
 
@@ -899,6 +899,14 @@
       res = "" + sec + "秒";
     }
     return res;
+  };
+
+  dispDate = function(work_log) {
+    var time;
+
+    time = new Date(work_log.started_at * 1000);
+    console.log(time);
+    return "" + (time.getMonth() + 1) + "/" + (time.getDate());
   };
 
   setInfo = function(key, val) {
