@@ -462,6 +462,7 @@
 
   renderProject = function(project) {
     $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n\n</div>");
+    $("#project_" + project.id).hide();
     hl.enter("#project_" + project.id + " div div .input", function(e, target) {
       var $project, project_id, title;
 
@@ -502,11 +503,7 @@
       issues = null;
     }
     if (!issues) {
-      issues = db.find("issues", {
-        closed_at: {
-          le: 1
-        }
-      }, {
+      issues = db.find("issues", null, {
         order: {
           upd_at: "desc"
         }
@@ -516,9 +513,7 @@
     i = 1;
     for (_i = 0, _len = issues.length; _i < _len; _i++) {
       issue = issues[_i];
-      if (!issue.will_start_at || issue.will_start_at < now()) {
-        renderIssue(issue, null, i);
-      }
+      renderIssue(issue, null, i);
       i = i + 0;
     }
     return doCards();
@@ -566,7 +561,6 @@
     }
     $project = $("#project_" + issue.project_id);
     $project_issues = $("#project_" + issue.project_id + " .issues");
-    $project.fadeIn(200);
     title = "" + issue.title;
     if (issue.body && issue.body.length > 0) {
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
@@ -601,7 +595,12 @@
       } else {
         $project_issues.prepend(html);
       }
-      $("issue_" + issue.id).hide().fadeIn(200);
+      if ((!issue.will_start_at || issue.will_start_at < now()) && (!issue.closed_at || issue.closed_at === 0)) {
+        $("#issue_" + issue.id).fadeIn(200);
+        $("#project_" + issue.project_id).fadeIn(200);
+      } else {
+        $("#issue_" + issue.id).fadeOut(200);
+      }
       prepareCards(issue.id);
       return prepareDD(issue.id);
     });
@@ -739,7 +738,7 @@
       name: name
     });
     renderProject(project);
-    $("#project_" + project.id).fadeIn(200);
+    $("#project_" + project.id).hide();
     return project;
   };
 

@@ -261,7 +261,7 @@ renderProject = (project) ->
 
     </div>
   """)
-
+  $("#project_#{project.id}").hide()
   hl.enter("#project_#{project.id} div div .input", (e, target)->
     title = $(target).val()
     $project = $(target).parent().parent().parent()
@@ -286,12 +286,11 @@ renderProject = (project) ->
   })
 
 renderIssues = (issues=null) ->
-  issues = db.find("issues",{closed_at: {le: 1}}, {order:{upd_at:"desc"}}) unless issues
+  issues = db.find("issues", null, {order:{upd_at:"desc"}}) unless issues
   $(".issues").html("")
   i = 1
   for issue in issues
-    if !issue.will_start_at or issue.will_start_at < now()
-      renderIssue(issue, null, i)
+    renderIssue(issue, null, i)
     i = i + 0
   doCards()
 
@@ -324,7 +323,6 @@ renderIssue = (issue, target=null, i = null) ->
   target = "append" unless target
   $project = $("#project_#{issue.project_id}")
   $project_issues = $("#project_#{issue.project_id} .issues")
-  $project.fadeIn(200)
   title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
   icon = if issue.server_id then "" else uicon
@@ -353,7 +351,11 @@ renderIssue = (issue, target=null, i = null) ->
       $project_issues.append(html)
     else
       $project_issues.prepend(html)
-    $("issue_#{issue.id}").hide().fadeIn(200)
+    if (!issue.will_start_at or issue.will_start_at < now() ) and (!issue.closed_at or issue.closed_at == 0)
+      $("#issue_#{issue.id}").fadeIn(200)
+      $("#project_#{issue.project_id}").fadeIn(200)
+    else
+      $("#issue_#{issue.id}").fadeOut(200)
     prepareCards(issue.id)
     prepareDD(issue.id)
   )
@@ -432,7 +434,7 @@ addIssue = (project_id, title) ->
 addProject = (name) ->
   project = db.ins("projects", {name: name})
   renderProject(project)
-  $("#project_#{project.id}").fadeIn(200)
+  $("#project_#{project.id}").hide()
   return project
 
 renderWorkLogs = (server=null) ->
