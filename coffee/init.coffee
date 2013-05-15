@@ -1,7 +1,8 @@
 init = () ->
   #prepareNodeServer()
-  prepareAddServer()
   prepareAddProject()
+  prepareShowProjects()
+  prepareAddServer()
   prepareDoExport()
   prepareDoImport()
   prepareDoCheckedDdt()
@@ -118,6 +119,12 @@ prepareNodeServer = () ->
           dbtype: dbtype
         })
       )
+
+prepareShowProjects = () ->
+  $(".show_projects").click(() ->
+    $(".project").fadeIn(100)
+    $(".issue").fadeIn(100)
+  )
 
 prepareAddServer = () ->
   hl.click(".add_server", (e, target)->
@@ -403,8 +410,6 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
     project.upd_at = now()
     db.upd("issues", issue)
     db.upd("projects", project)
-    console.log issue
-    console.log project
   if is_start == null
     if wl && parseInt(wl.issue_id) == parseInt(issue_id)
       is_start = false
@@ -545,7 +550,6 @@ dispTime = (work_log) ->
 
 dispDate = (work_log) ->
   time = new Date(work_log.started_at*1000)
-  console.log time
   "#{time.getMonth()+1}/#{time.getDate()}"
 
 

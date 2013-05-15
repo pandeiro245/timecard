@@ -84,11 +84,12 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
-    prepareAddServer();
     prepareAddProject();
+    prepareShowProjects();
+    prepareAddServer();
     prepareDoExport();
     prepareDoImport();
     prepareDoCheckedDdt();
@@ -296,6 +297,13 @@
         });
       });
     }
+  };
+
+  prepareShowProjects = function() {
+    return $(".show_projects").click(function() {
+      $(".project").fadeIn(100);
+      return $(".issue").fadeIn(100);
+    });
   };
 
   prepareAddServer = function() {
@@ -688,8 +696,6 @@
       project.upd_at = now();
       db.upd("issues", issue);
       db.upd("projects", project);
-      console.log(issue);
-      console.log(project);
     }
     if (is_start === null) {
       if (wl && parseInt(wl.issue_id) === parseInt(issue_id)) {
@@ -905,7 +911,6 @@
     var time;
 
     time = new Date(work_log.started_at * 1000);
-    console.log(time);
     return "" + (time.getMonth() + 1) + "/" + (time.getDate());
   };
 
