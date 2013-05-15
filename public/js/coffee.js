@@ -84,13 +84,14 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispTime, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispTime, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, pushIfHasIssue, renderCards, renderCls, renderDdt, renderEdit, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     prepareAddServer();
     prepareAddProject();
     prepareDoExport();
     prepareDoImport();
+    prepareDoCheckedDdt();
     renderProjects();
     renderIssues();
     renderWorkLogs();
@@ -426,6 +427,24 @@
       }
     }
     return true;
+  };
+
+  prepareDoCheckedDdt = function() {
+    return $(".do_checked_ddt").click(function() {
+      var $checked, i, _i, _len, _results;
+
+      $checked = $("input:checkbox:checked");
+      if ($checked.length === 0) {
+        return alert("please select issues");
+      } else {
+        _results = [];
+        for (_i = 0, _len = $checked.length; _i < _len; _i++) {
+          i = $checked[_i];
+          _results.push($(i).parent().parent().parent().find(".btn-toolbar").find(".btn-group").find(".ddt").click());
+        }
+        return _results;
+      }
+    });
   };
 
   renderProject = function(project) {

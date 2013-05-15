@@ -4,6 +4,7 @@ init = () ->
   prepareAddProject()
   prepareDoExport()
   prepareDoImport()
+  prepareDoCheckedDdt()
   renderProjects()
   renderIssues()
   renderWorkLogs()
@@ -220,6 +221,17 @@ doImport = (json) ->
       debug table_name, item
       db.ins(table_name, item)
   return true
+
+
+prepareDoCheckedDdt = () ->
+  $(".do_checked_ddt").click(() ->
+    $checked = $("input:checkbox:checked")
+    if $checked.length == 0
+      alert "please select issues"
+    else
+      for i in $checked
+        $(i).parent().parent().parent().find(".btn-toolbar").find(".btn-group").find(".ddt").click()
+  )
 
 renderProject = (project) ->
   $("#issues").append("""
