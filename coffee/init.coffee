@@ -356,6 +356,7 @@ renderIssue = (issue, target=null, i = null) ->
       $("#project_#{issue.project_id}").fadeIn(200)
     else
       $("#issue_#{issue.id}").fadeOut(200)
+      $("#issue_#{issue.id}").css("background", "#666")
     prepareCards(issue.id)
     prepareDD(issue.id)
   )
