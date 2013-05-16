@@ -296,9 +296,12 @@ renderIssues = (issues=null) ->
 
 prepareCards = (issue_id) ->
   $(() ->
-    $("#issue_#{issue_id} div div h2").click(() ->
+    $("#issue_#{issue_id} h2").click(() ->
       $e = $(this).parent().find(".body")
-      turnback($e)
+      if $e.html().match(/http/) #FIXME
+        window.open($e.html(), "_blank")
+      else
+        turnback($e)
       return false
     )
     $("#issue_#{issue_id} div div .card").click(() ->
@@ -385,9 +388,10 @@ doEdit = (issue_id) ->
   issue.title = prompt('issue title', issue.title)
   if issue.title.length > 1
     db.upd("issues", issue)
-    $("#issue_#{issue.id} h2").html(issue.title)
-  else
-    alert "please input title more than 2 chars"
+  issue.body = prompt('issue body', issue.body)
+  if issue.body.length > 1
+    db.upd("issues", issue)
+  location.reload()
 
 doCards = (issue_id = null) ->
   updateWorkingLog(null, issue_id)
@@ -514,6 +518,10 @@ renderWorkingLog = () ->
     $(".work_log_#{wl.id} .time").html(time)
     $("#issue_#{wl.issue_id} h2 .time").html("(#{time})")
     $("#issue_#{wl.issue_id} div div .card").html("Stop")
+    issue = db.one("issues", {id: wl.issue_id})
+    $(".hero-unit h1").html(issue.title)
+    $(".hero-unit p").html(issue.body)
+
   $("title").html(time)
 
 loopRenderWorkLogs = () ->
