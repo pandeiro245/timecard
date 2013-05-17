@@ -13,6 +13,7 @@ init = () ->
   loopRenderWorkLogs()
   loopFetch()
 
+
 fetch = (server) ->
   domain = server.domain
   token = server.token
@@ -461,6 +462,8 @@ renderWorkLogs = (server=null) ->
         <a href=\"#\" class=\"cardw btn btn-warning\">STOP</a>
         </div>
       """
+    s = new Date(work_log.started_at*1000)
+    $(".md_#{s.getMonth()+1}_#{s.getDate()}").append("<div>#{issue.title}</div>")
     $("#work_logs").append("""
       <tr class=\"work_log_#{work_log.id}\">
       <td>
@@ -507,9 +510,9 @@ renderCalendar = (key, now) ->
     $day = $(".#{key} table .w#{w} .d#{d}")
     $day.html(i).addClass("day#{i}")
     $day.css("background", "#fc0") if i == day && key == "this_month"
+    $day.addClass("md_#{mon}_#{i}")
     w += 1 if d == 7
-
-
+  renderWorkLogs()
 
 renderWorkingLog = () ->
   wl = working_log()

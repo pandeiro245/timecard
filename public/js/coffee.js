@@ -750,7 +750,7 @@
   };
 
   renderWorkLogs = function(server) {
-    var issue, stop, url, wl, work_log, _i, _len, _ref, _results;
+    var issue, s, stop, url, wl, work_log, _i, _len, _ref, _results;
 
     if (server == null) {
       server = null;
@@ -784,6 +784,8 @@
       if (!work_log.end_at) {
         stop = "<div style=\"padding:10px;\">\n<a href=\"#\" class=\"cardw btn btn-warning\">STOP</a>\n</div>";
       }
+      s = new Date(work_log.started_at * 1000);
+      $(".md_" + (s.getMonth() + 1) + "_" + (s.getDate())).append("<div>" + issue.title + "</div>");
       $("#work_logs").append("<tr class=\"work_log_" + work_log.id + "\">\n<td>\n" + issue.title + "\n</td>\n<td>\n" + (dispDate(work_log)) + "\n</td>\n<td>\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n</td>\n<td>\n" + (work_log.server_id ? "" : uicon) + "\n" + stop + "\n</td>\n</tr>");
       $(".cardw").click(function() {
         var issue_id;
@@ -813,7 +815,7 @@
   };
 
   renderCalendar = function(key, now) {
-    var $day, d, day, i, mon, start, w, wday, year, _i, _results;
+    var $day, d, day, i, mon, start, w, wday, year, _i;
 
     year = now.getYear() + 1900;
     mon = now.getMonth() + 1;
@@ -822,7 +824,6 @@
     start = wday - day % 7 - 1;
     w = 1;
     $("." + key + " h2").html("" + year + "-" + (zp(mon)));
-    _results = [];
     for (i = _i = 1; _i <= 31; i = ++_i) {
       d = (i + start) % 7 + 1;
       $day = $("." + key + " table .w" + w + " .d" + d);
@@ -830,13 +831,12 @@
       if (i === day && key === "this_month") {
         $day.css("background", "#fc0");
       }
+      $day.addClass("md_" + mon + "_" + i);
       if (d === 7) {
-        _results.push(w += 1);
-      } else {
-        _results.push(void 0);
+        w += 1;
       }
     }
-    return _results;
+    return renderWorkLogs();
   };
 
   renderWorkingLog = function() {
