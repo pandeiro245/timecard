@@ -525,7 +525,7 @@
         var $e;
 
         $e = $(this).parent().find(".body");
-        if ($e.html().match(/http/)) {
+        if ($e.html().match(/http/) || $e.html().match(/file/)) {
           window.open($e.html(), "_blank");
         } else {
           turnback($e);

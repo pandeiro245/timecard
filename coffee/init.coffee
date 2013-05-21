@@ -299,7 +299,7 @@ prepareCards = (issue_id) ->
   $(() ->
     $("#issue_#{issue_id} h2").click(() ->
       $e = $(this).parent().find(".body")
-      if $e.html().match(/http/) #FIXME
+      if $e.html().match(/http/) or $e.html().match(/file/)#FIXME
         window.open($e.html(), "_blank")
       else
         turnback($e)
