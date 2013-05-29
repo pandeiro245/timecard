@@ -84,9 +84,12 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
+    $(window).focus(function(e) {
+      return stopWorkLog();
+    });
     prepareAddProject();
     prepareShowProjects();
     prepareAddServer();
@@ -100,6 +103,8 @@
     loopRenderWorkLogs();
     return loopFetch();
   };
+
+  subWin = {};
 
   fetch = function(server) {
     var diffs, domain, issue, issues, params, project, projects, token, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
@@ -526,7 +531,8 @@
 
         $e = $(this).parent().find(".body");
         if ($e.html().match(/http/) || $e.html().match(/file/)) {
-          window.open($e.html(), "_blank");
+          startWorkLog(issue_id);
+          subWin = window.open($e.html(), "issue_" + issue_id);
         } else {
           turnback($e);
         }
@@ -672,8 +678,8 @@
     return updateWorkingLog(true, issue_id);
   };
 
-  stopWorkLog = function(issue_id) {
-    return updateWorkingLog(false, issue_id);
+  stopWorkLog = function() {
+    return updateWorkingLog(false);
   };
 
   updateWorkingLog = function(is_start, issue_id) {
@@ -689,6 +695,9 @@
     $(".card").removeClass("btn-warning");
     $(".card").addClass("btn-primary");
     wl = working_log();
+    if (is_start === false) {
+      issue_id = wl.issue_id;
+    }
     if (wl && issue_id) {
       wl.end_at = now();
       db.upd("work_logs", wl);
@@ -790,7 +799,7 @@
       $(".cardw").click(function() {
         var issue_id;
 
-        issue_id = $(this).parent().parent().attr("class").replace("work_log_", "");
+        issue_id = $(this).parent().parent().parent().attr("class").replace("work_log_", "");
         updateWorkingLog(false, parseInt(issue_id));
         return false;
       });

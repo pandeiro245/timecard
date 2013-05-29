@@ -1,4 +1,8 @@
 init = () ->
+  $(window).focus((e) ->
+    #subWin.close()
+    stopWorkLog()
+  )
   #prepareNodeServer()
   prepareAddProject()
   prepareShowProjects()
@@ -13,6 +17,7 @@ init = () ->
   loopRenderWorkLogs()
   loopFetch()
 
+subWin = {}
 
 fetch = (server) ->
   domain = server.domain
@@ -300,7 +305,9 @@ prepareCards = (issue_id) ->
     $("#issue_#{issue_id} h2").click(() ->
       $e = $(this).parent().find(".body")
       if $e.html().match(/http/) or $e.html().match(/file/)#FIXME
-        window.open($e.html(), "_blank")
+        startWorkLog(issue_id)
+        #subWin = window.open("./sub_win.html##{$e.html()}", "issue_#{issue_id}")
+        subWin = window.open($e.html(), "issue_#{issue_id}")
       else
         turnback($e)
       return false
@@ -400,18 +407,18 @@ doCards = (issue_id = null) ->
 startWorkLog = (issue_id) ->
   updateWorkingLog(true, issue_id)
 
-stopWorkLog = (issue_id) ->
-  updateWorkingLog(false, issue_id)
+stopWorkLog = () ->
+  updateWorkingLog(false)
 
 updateWorkingLog = (is_start=null, issue_id=null) ->
   $(".card").html("Start")
   $(".card").removeClass("btn-warning")
   $(".card").addClass("btn-primary")
   wl = working_log()
-  if wl && issue_id
+  issue_id = wl.issue_id if is_start == false
+  if wl && issue_id #stop
     wl.end_at = now()
     db.upd("work_logs", wl)
-
     issue = db.one("issues", {id: issue_id})
     issue.upd_at = now()
     project = db.one("projects", {id: issue.project_id})
@@ -425,7 +432,7 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
       is_start = true
   if is_start && issue_id
     db.ins("work_logs", {issue_id: issue_id, started_at: now()})
-
+    
   issue_id = working_log().issue_id if working_log()
   if working_log()
     $("#issue_#{issue_id} .card").html("Stop")
@@ -482,7 +489,7 @@ renderWorkLogs = (server=null) ->
       </tr>
     """)
     $(".cardw").click(() ->
-      issue_id = $(this).parent().parent().attr("class").replace("work_log_", "") 
+      issue_id = $(this).parent().parent().parent().attr("class").replace("work_log_", "") 
       updateWorkingLog(false, parseInt(issue_id))
       return false
     )
@@ -526,6 +533,8 @@ renderWorkingLog = () ->
     $(".hero-unit p").html(issue.body)
 
   $("title").html(time)
+
+
 
 loopRenderWorkLogs = () ->
   renderWorkingLog()
