@@ -1,5 +1,5 @@
 (function() {
-  var JSRel, addIssue, addProject, api, app, buffer, callback, db, dispTime, express, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, http, io, last_fetch, node_dev, now, pushIfHasIssue, save_diffs, schema, server, setInfo, sync, sync_item, turnback, uploading_icon, working_log, zero;
+  var JSRel, addIssue, addProject, api, app, buffer, callback, db, dispTime, express, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, http, io, last_fetch, node_dev, node_projects, now, pushIfHasIssue, save_diffs, schema, server, setInfo, sync, sync_item, turnback, uploading_icon, working_log, zero;
 
   JSRel = require('jsrel');
 
@@ -18,6 +18,8 @@
   app.get('*', function(req, res) {
     if (req.url === "/node_dev") {
       return node_dev(req, res);
+    } else if (req.url === "/projects") {
+      return node_projects(req, res);
     } else if (req.url.match("api")) {
       return api(req, res);
     } else {
@@ -108,18 +110,14 @@
 
     projects = [];
     issues = [];
-    _ref = db.find("projects", null, {
-      limit: 1
-    });
+    _ref = db.find("projects");
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       project = _ref[_i];
       project.server_id = project.id;
       delete project.id;
       projects.push(project);
     }
-    _ref1 = db.find("issues", null, {
-      limit: 1
-    });
+    _ref1 = db.find("issues");
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       issue = _ref1[_j];
       issue.server_id = issue.id;
@@ -176,7 +174,6 @@
       }
       return _results;
     } else {
-      console.log(data);
       if (data) {
         _results1 = [];
         for (_i = 0, _len = data.length; _i < _len; _i++) {
@@ -217,6 +214,29 @@
     } else {
       i.server_id = parseInt(i.local_id);
       delete i.local_id;
+      if (table_name === "projects") {
+        if (db.one("projects", {
+          name: i.name,
+          ins_at: i.ins_at
+        })) {
+          return false;
+        }
+      }
+      if (table_name === "issues") {
+        if (db.one("issues", {
+          title: i.title,
+          ins_at: i.ins_at
+        })) {
+          return false;
+        }
+      }
+      if (table_name === "work_logs") {
+        if (db.one("work_logs", {
+          ins_at: i.ins_at
+        })) {
+          return false;
+        }
+      }
       return item = db.ins(table_name, i);
     }
   };
@@ -419,9 +439,31 @@
 
     body = "<a href=\"/\">back</a>";
     body += "<hr />";
-    console.log(req);
     for (_i = 0, _len = req.length; _i < _len; _i++) {
       i = req[_i];
+      body += i + ' is ' + req[i];
+      body += "<br />";
+    }
+    body += "<hr />";
+    body += "<a href=\"/\">back</a>";
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Length', body.length);
+    return res.end(body);
+  };
+
+  node_projects = function(req, res) {
+    var body, i, project, _i, _j, _len, _len1, _ref;
+
+    body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>";
+    body += "<hr />";
+    _ref = db.find("projects");
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      project = _ref[_i];
+      body += "" + project.name + "<br />";
+    }
+    body += "<hr />";
+    for (_j = 0, _len1 = req.length; _j < _len1; _j++) {
+      i = req[_j];
       body += i + ' is ' + req[i];
       body += "<br />";
     }

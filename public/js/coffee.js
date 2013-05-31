@@ -90,6 +90,7 @@
     $(window).focus(function(e) {
       return stopWorkLog();
     });
+    prepareNodeServer();
     prepareAddProject();
     prepareShowProjects();
     prepareAddServer();
@@ -100,8 +101,7 @@
     renderIssues();
     renderWorkLogs();
     renderCalendars();
-    loopRenderWorkLogs();
-    return loopFetch();
+    return loopRenderWorkLogs();
   };
 
   subWin = {};
@@ -159,10 +159,6 @@
       debug("callback data", data);
       updtWorkLogServerIds(data);
       sync(server, "server_ids", data.server_ids);
-      sync(server, "projects", data.projects);
-      sync(server, "issues", data.issues);
-      sync(server, "work_logs", data.work_logs);
-      renderWorkLogs(server);
       return last_fetch(now());
     });
   };
@@ -286,15 +282,15 @@
     var dbtype, url;
 
     if (location.href.match("local") && !db.one("servers", {
-      domain: ""
+      domain: "http://localhost:3000"
     })) {
       dbtype = "local";
-      url = "/api/users.json";
+      url = "http://localhost:3000/api/users.json";
       return $.get(url, function(data) {
         var server;
 
         return server = db.ins("servers", {
-          domain: "",
+          domain: "http://localhost:3000",
           user_id: data.id,
           has_connect: true,
           dbtype: dbtype
@@ -947,7 +943,7 @@
       fetch(server);
     }
     return setTimeout(function() {
-      return loopFetch();
+      return true;
     }, 1000 * 10);
   };
 

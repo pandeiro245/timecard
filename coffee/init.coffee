@@ -1,9 +1,8 @@
 init = () ->
   $(window).focus((e) ->
-    #subWin.close()
     stopWorkLog()
   )
-  #prepareNodeServer()
+  prepareNodeServer()
   prepareAddProject()
   prepareShowProjects()
   prepareAddServer()
@@ -15,7 +14,7 @@ init = () ->
   renderWorkLogs()
   renderCalendars()
   loopRenderWorkLogs()
-  loopFetch()
+  #loopFetch()
 
 subWin = {}
 
@@ -51,13 +50,13 @@ fetch = (server) ->
   url = "#{domain}/api/v1/diffs.json"
 
   $.post(url, params, (data) ->
-    debug "callback data", data # crowdsourcing.dev へのアクセスは表示されるが localhost:3000は表示されない（リクエストはされているのに）
+    debug "callback data", data 
     updtWorkLogServerIds(data)
     sync(server, "server_ids", data.server_ids)
-    sync(server, "projects", data.projects)
-    sync(server, "issues", data.issues)
-    sync(server, "work_logs", data.work_logs)
-    renderWorkLogs(server)
+    #sync(server, "projects", data.projects)
+    #sync(server, "issues", data.issues)
+    #sync(server, "work_logs", data.work_logs)
+    #renderWorkLogs(server)
     last_fetch(now())
   )
 
@@ -115,17 +114,17 @@ renderProjects = () ->
   $("#issues").append(innerLink())
 
 prepareNodeServer = () ->
-    if location.href.match("local") and !db.one("servers", {domain: ""}) 
-      dbtype = "local"
-      url = "/api/users.json"
-      $.get(url, (data) ->
-        server = db.ins("servers", {
-          domain: "",
-          user_id: data.id,
-          has_connect: true,
-          dbtype: dbtype
-        })
-      )
+  if location.href.match("local") and !db.one("servers", {domain: "http://localhost:3000"}) 
+    dbtype = "local"
+    url = "http://localhost:3000/api/users.json"
+    $.get(url, (data) ->
+      server = db.ins("servers", {
+        domain: "http://localhost:3000",
+        user_id: data.id,
+        has_connect: true,
+        dbtype: dbtype
+      })
+    )
 
 prepareShowProjects = () ->
   $(".show_projects").click(() ->
@@ -590,7 +589,8 @@ loopFetch = () ->
   for server in db.find("servers")
     fetch(server)
   setTimeout(()->
-    loopFetch()
+    return true
+    #loopFetch()
   ,1000*10)
 
 last_fetch = (sec = null) ->

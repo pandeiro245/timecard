@@ -9,6 +9,8 @@ io = require('socket.io').listen(server)
 app.get('*', (req, res) ->
   if req.url == "/node_dev"
     node_dev(req, res)
+  else if req.url == "/projects"
+    node_projects(req, res)
   else if req.url.match("api")
     api(req, res)
   else
@@ -88,11 +90,11 @@ working_log = null
 callback = () ->
   projects = []
   issues = []
-  for project in db.find("projects", null, {limit:1})
+  for project in db.find("projects")
     project.server_id = project.id
     delete project.id
     projects.push(project)
-  for issue in db.find("issues", null, {limit:1})
+  for issue in db.find("issues")
     issue.server_id = issue.id
     delete issue.id
     issues.push(issue)
@@ -128,7 +130,6 @@ sync = (server, table_name, data) ->
         item.server_id = server_id
         db.upd(table_name, item)
   else
-    console.log data
     if data
       for i in data
         sync_item(server, table_name, i)
@@ -153,6 +154,12 @@ sync_item = (server, table_name, i) ->
     i.server_id = parseInt(i.local_id)
     #delete i.id
     delete i.local_id
+    if table_name == "projects"
+      return false if db.one("projects", {name: i.name, ins_at: i.ins_at})
+    if table_name == "issues"
+      return false if db.one("issues", {title: i.title, ins_at: i.ins_at})
+    if table_name == "work_logs"
+      return false if db.one("work_logs", {ins_at: i.ins_at})
     item = db.ins(table_name, i)
 
 addIssue = (project_id, title) ->
@@ -269,7 +276,6 @@ io.sockets.on('connection', (client)->
 node_dev = (req, res)->
   body = "<a href=\"/\">back</a>"
   body += "<hr />"
-  console.log req
   for i in req
     body += i + ' is ' + req[i]
     body += "<br />"
@@ -279,5 +285,19 @@ node_dev = (req, res)->
   res.setHeader('Content-Length', body.length)
   res.end(body)
 
+node_projects = (req, res)->
+  body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>"
+  body += "<hr />"
+  for project in db.find("projects")
+    body += "#{project.name}<br />"
+  body += "<hr />"
+  for i in req
+    body += i + ' is ' + req[i]
+    body += "<br />"
+  body += "<hr />"
+  body += "<a href=\"/\">back</a>"
+  res.setHeader('Content-Type', 'text/html')
+  res.setHeader('Content-Length', body.length)
+  res.end(body)
 
 server.listen(3000)
