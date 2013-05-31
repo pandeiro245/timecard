@@ -711,6 +711,7 @@
       project.upd_at = now();
       db.upd("issues", issue);
       db.upd("projects", project);
+      $("title").html("Timecard");
     }
     if (is_start === null) {
       if (wl && parseInt(wl.issue_id) === parseInt(issue_id)) {

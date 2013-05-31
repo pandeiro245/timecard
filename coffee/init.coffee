@@ -425,12 +425,13 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
     project.upd_at = now()
     db.upd("issues", issue)
     db.upd("projects", project)
+    $("title").html("Timecard")
   if is_start == null
     if wl && parseInt(wl.issue_id) == parseInt(issue_id)
       is_start = false
     else
       is_start = true
-  if is_start && issue_id
+  if is_start && issue_id #start
     db.ins("work_logs", {issue_id: issue_id, started_at: now()})
     
   issue_id = working_log().issue_id if working_log()
