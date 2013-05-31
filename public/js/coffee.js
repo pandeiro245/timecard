@@ -671,9 +671,15 @@
     issue = db.one("issues", {
       id: issue_id
     });
-    issue.will_start_at = now() + 12 * 3600;
-    db.upd("issues", issue);
-    return $("#issue_" + issue.id).fadeOut(200);
+    if (issue.will_start_at < now()) {
+      issue.will_start_at = now() + 12 * 3600;
+      db.upd("issues", issue);
+      return $("#issue_" + issue.id).fadeOut(200);
+    } else {
+      issue.will_start_at = null;
+      db.upd("issues", issue);
+      return location.reload();
+    }
   };
 
   doCls = function(issue_id) {
