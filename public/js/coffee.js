@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     $(window).focus(function(e) {
@@ -465,7 +465,13 @@
   };
 
   renderProject = function(project) {
-    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n" + (innerLink()) + "\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n\n</div>");
+    var project_name;
+
+    project_name = project.name;
+    if (project.url) {
+      project_name = "<a href=\"" + project.url + "\" target=\"_blank\">" + project.name + "</a>";
+    }
+    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n" + (innerLink()) + "\n<div class=\"span12\">\n<h1>\n  " + project_name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n<div class=\"edit\"> \n  <a href=\"#\" class=\"btn\">Edit</a>\n</div>\n</div>\n\n</div>");
     $("#project_" + project.id).hide();
     hl.enter("#project_" + project.id + " div div .input", function(e, target) {
       var $project, project_id, title;
@@ -479,6 +485,9 @@
       } else {
         return alert("please input the title");
       }
+    });
+    hl.click("#project_" + project.id + " div .edit a", function(e, target) {
+      return doEditProject(project.id);
     });
     return $("#project_" + project.id + " div h1").droppable({
       over: function(event, ui) {
@@ -543,13 +552,23 @@
   prepareCards = function(issue_id) {
     return $(function() {
       $("#issue_" + issue_id + " h2").click(function() {
-        var $e;
+        var $e, issue, project, url;
 
-        $e = $(this).parent().find(".body");
-        if ($e.html().match(/http/) || $e.html().match(/file/)) {
+        issue = db.one("issues", {
+          id: issue_id
+        });
+        project = db.one("projects", {
+          id: issue.project_id
+        });
+        url = issue.url;
+        if (project.url && !url) {
+          url = project.url;
+        }
+        if (url) {
           startWorkLog(issue_id);
-          subWin = window.open($e.html(), "issue_" + issue_id);
+          subWin = window.open(url, "issue_" + issue_id);
         } else {
+          $e = $(this).parent().find(".body");
           turnback($e);
         }
         return false;
@@ -567,14 +586,14 @@
         return false;
       });
       return $("#issue_" + issue_id + " div div .edit").click(function() {
-        doEdit(issue_id);
+        doEditIssue(issue_id);
         return false;
       });
     });
   };
 
   renderIssue = function(issue, target, i) {
-    var $project, $project_issues, btn_type, disp, icon, style, title;
+    var $project, $project_issues, btn_type, disp, icon, project, style, title;
 
     if (target == null) {
       target = null;
@@ -588,7 +607,10 @@
     $project = $("#project_" + issue.project_id);
     $project_issues = $("#project_" + issue.project_id + " .issues");
     title = "" + issue.title;
-    if (issue.body && issue.body.length > 0) {
+    project = db.one("projects", {
+      id: issue.project_id
+    });
+    if (issue.url || project.url) {
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
     icon = issue.server_id ? "" : uicon;
@@ -665,7 +687,7 @@
     return $("#issue_" + issue.id).fadeOut(200);
   };
 
-  doEdit = function(issue_id) {
+  doEditIssue = function(issue_id) {
     var issue;
 
     issue = db.one("issues", {
@@ -675,9 +697,30 @@
     if (issue.title.length > 1) {
       db.upd("issues", issue);
     }
+    issue.url = prompt('issue url', issue.url);
+    if (issue.url.length > 1) {
+      db.upd("issues", issue);
+    }
     issue.body = prompt('issue body', issue.body);
     if (issue.body.length > 1) {
       db.upd("issues", issue);
+    }
+    return location.reload();
+  };
+
+  doEditProject = function(project_id) {
+    var project;
+
+    project = db.one("projects", {
+      id: project_id
+    });
+    project.name = prompt('project name', project.name);
+    if (project.name.length > 1) {
+      db.upd("projects", project);
+    }
+    project.url = prompt('project url', project.url);
+    if (project.url.length > 1) {
+      db.upd("projects", project);
     }
     return location.reload();
   };

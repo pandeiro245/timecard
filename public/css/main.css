@@ -50,3 +50,7 @@ body{
 .innerlink span a{
   color: #ccc;
 }
+
+.project div .edit{
+  float: right;
+}

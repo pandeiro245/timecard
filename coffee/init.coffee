@@ -253,17 +253,22 @@ prepareDoCheckedDdt = () ->
 
 
 renderProject = (project) ->
+  project_name = project.name
+  project_name = "<a href=\"#{project.url}\" target=\"_blank\">#{project.name}</a>" if project.url
   $("#issues").append("""
     <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
     #{innerLink()}
     <div class=\"span12\">
     <h1>
-      #{project.name}#{if project.server_id then "" else uicon}
+      #{project_name}#{if project.server_id then "" else uicon}
     </h1>
     <div class=\"issues\"></div>
     <div class=\"input-append\"> 
       <input type=\"text\" class=\"input\" />
       <input type=\"submit\" value=\"add issue\" class=\"btn\" />
+    </div>
+    <div class=\"edit\"> 
+      <a href="#" class=\"btn\">Edit</a>
     </div>
     </div>
 
@@ -280,6 +285,11 @@ renderProject = (project) ->
     else
       alert "please input the title"
   )
+
+  hl.click("#project_#{project.id} div .edit a", (e, target)->
+    doEditProject(project.id)
+  )
+
   $("#project_#{project.id} div h1").droppable({
     over: (event, ui) ->
       $(this).css("background", "#fc0")
@@ -313,12 +323,16 @@ renderIssues = (issues=null) ->
 prepareCards = (issue_id) ->
   $(() ->
     $("#issue_#{issue_id} h2").click(() ->
-      $e = $(this).parent().find(".body")
-      if $e.html().match(/http/) or $e.html().match(/file/)#FIXME
+      issue = db.one("issues", {id: issue_id})
+      project = db.one("projects", {id: issue.project_id})
+      url = issue.url
+      url = project.url if project.url and !url
+      if url
         startWorkLog(issue_id)
         #subWin = window.open("./sub_win.html##{$e.html()}", "issue_#{issue_id}")
-        subWin = window.open($e.html(), "issue_#{issue_id}")
+        subWin = window.open(url, "issue_#{issue_id}")
       else
+        $e = $(this).parent().find(".body")
         turnback($e)
       return false
     )
@@ -335,7 +349,7 @@ prepareCards = (issue_id) ->
       return false
     )
     $("#issue_#{issue_id} div div .edit").click(() ->
-      doEdit(issue_id)
+      doEditIssue(issue_id)
       return false
     )
   )
@@ -345,7 +359,9 @@ renderIssue = (issue, target=null, i = null) ->
   $project = $("#project_#{issue.project_id}")
   $project_issues = $("#project_#{issue.project_id} .issues")
   title = "#{issue.title}"
-  title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
+  project = db.one("projects", {id: issue.project_id})
+  if (issue.url or project.url)
+    title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" 
   icon = if issue.server_id then "" else uicon
 
   disp = "Start"
@@ -401,14 +417,27 @@ doCls = (issue_id) ->
   db.upd("issues", issue)
   $("#issue_#{issue.id}").fadeOut(200)
 
-doEdit = (issue_id) ->
+doEditIssue = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   issue.title = prompt('issue title', issue.title)
   if issue.title.length > 1
     db.upd("issues", issue)
+  issue.url = prompt('issue url', issue.url)
+  if issue.url.length > 1
+    db.upd("issues", issue)
   issue.body = prompt('issue body', issue.body)
   if issue.body.length > 1
     db.upd("issues", issue)
+  location.reload()
+
+doEditProject = (project_id) ->
+  project = db.one("projects", {id: project_id})
+  project.name = prompt('project name', project.name)
+  if project.name.length > 1
+    db.upd("projects", project)
+  project.url = prompt('project url', project.url)
+  if project.url.length > 1
+    db.upd("projects", project)
   location.reload()
 
 doCards = (issue_id = null) ->

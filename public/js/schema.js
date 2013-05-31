@@ -12,12 +12,14 @@ window.schema = {
   projects: {
     name: "",
     body: "",
+    url: "",
     server_id: 0,
     //$uniques: "server_id"
   },
   issues: {
     title: "",
     body: "",
+    url: "",
     project_id: 0,
     server_id: 0,
     is_ddt: "off",
