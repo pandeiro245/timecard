@@ -38,3 +38,15 @@ body{
 .input-append{
   float: right;
 }
+
+.innerlink{
+  margin: 20px 0 10px 30px;
+}
+
+.innerlink span{
+  display: none;
+}
+
+.innerlink span a{
+  color: #ccc;
+}

@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEdit, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     $(window).focus(function(e) {
@@ -267,7 +267,7 @@
   };
 
   renderProjects = function() {
-    var project, projects, _i, _len, _results;
+    var project, projects, _i, _len;
 
     projects = db.find("projects", null, {
       order: {
@@ -275,12 +275,11 @@
       }
     });
     $("#issues").html("");
-    _results = [];
     for (_i = 0, _len = projects.length; _i < _len; _i++) {
       project = projects[_i];
-      _results.push(renderProject(project));
+      renderProject(project);
     }
-    return _results;
+    return $("#issues").append(innerLink());
   };
 
   prepareNodeServer = function() {
@@ -466,7 +465,7 @@
   };
 
   renderProject = function(project) {
-    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n\n</div>");
+    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n" + (innerLink()) + "\n<div class=\"span12\">\n<h1>\n  " + project.name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n</div>\n\n</div>");
     $("#project_" + project.id).hide();
     hl.enter("#project_" + project.id + " div div .input", function(e, target) {
       var $project, project_id, title;
@@ -499,6 +498,23 @@
         return location.reload();
       }
     });
+  };
+
+  innerLink = function() {
+    var project, projects, res, _i, _len;
+
+    res = "<div class=\"innerlink\"> | ";
+    projects = db.find("projects", null, {
+      order: {
+        upd_at: "desc"
+      }
+    });
+    for (_i = 0, _len = projects.length; _i < _len; _i++) {
+      project = projects[_i];
+      res += "<span class=\"project_" + project.id + "\"><a href=\"#project_" + project.id + "\">" + project.name + "</a> | </span>";
+    }
+    res += "</div>";
+    return res;
   };
 
   renderIssues = function(issues) {
@@ -576,17 +592,15 @@
       title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
     }
     icon = issue.server_id ? "" : uicon;
+    disp = "Start";
+    btn_type = "btn-primary";
     if (working_log() && working_log().issue_id === issue.id) {
       disp = "Stop";
       btn_type = "btn-warning";
-    } else {
-      disp = "Start";
-      btn_type = "btn-primary";
     }
+    style = "";
     if (i % 4 === 1) {
       style = "style=\"margin-left:0;\"";
-    } else {
-      style = "";
     }
     return umecob({
       use: 'jquery',
@@ -607,6 +621,7 @@
       }
       if ((!issue.will_start_at || issue.will_start_at < now()) && (!issue.closed_at || issue.closed_at === 0)) {
         $("#issue_" + issue.id).fadeIn(200);
+        $(".innerlink .project_" + issue.project_id).fadeIn(200);
         $("#project_" + issue.project_id).fadeIn(200);
       } else {
         $("#issue_" + issue.id).fadeOut(200);

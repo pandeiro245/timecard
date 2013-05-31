@@ -112,6 +112,7 @@ renderProjects = () ->
   $("#issues").html("")
   for project in projects
     renderProject(project)
+  $("#issues").append(innerLink())
 
 prepareNodeServer = () ->
     if location.href.match("local") and !db.one("servers", {domain: ""}) 
@@ -254,6 +255,7 @@ prepareDoCheckedDdt = () ->
 renderProject = (project) ->
   $("#issues").append("""
     <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
+    #{innerLink()}
     <div class=\"span12\">
     <h1>
       #{project.name}#{if project.server_id then "" else uicon}
@@ -290,6 +292,14 @@ renderProject = (project) ->
       db.upd("issues", issue)
       location.reload()
   })
+
+innerLink = () ->
+  res = "<div class=\"innerlink\"> | "
+  projects = db.find("projects", null, {order: {upd_at: "desc"}})
+  for project in projects
+    res += "<span class=\"project_#{project.id}\"><a href=\"#project_#{project.id}\">#{project.name}</a> | </span>"
+  res += "</div>"
+  return res
 
 renderIssues = (issues=null) ->
   issues = db.find("issues", null, {order:{upd_at:"desc"}}) unless issues
@@ -337,17 +347,16 @@ renderIssue = (issue, target=null, i = null) ->
   title = "#{issue.title}"
   title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" if issue.body && issue.body.length > 0
   icon = if issue.server_id then "" else uicon
+
+  disp = "Start"
+  btn_type = "btn-primary"
   if working_log() && working_log().issue_id == issue.id
     disp = "Stop"
     btn_type = "btn-warning"
-  else
-    disp = "Start"
-    btn_type = "btn-primary"
 
+  style = ""
   if i%4 == 1
     style = "style=\"margin-left:0;\""
-  else
-    style = ""
 
   #umecob({use: 'jquery', tpl_id: "./partials/issue.html", data:{
   umecob({use: 'jquery', tpl: views_issue, data:{
@@ -364,6 +373,7 @@ renderIssue = (issue, target=null, i = null) ->
       $project_issues.prepend(html)
     if (!issue.will_start_at or issue.will_start_at < now() ) and (!issue.closed_at or issue.closed_at == 0)
       $("#issue_#{issue.id}").fadeIn(200)
+      $(".innerlink .project_#{issue.project_id}").fadeIn(200)
       $("#project_#{issue.project_id}").fadeIn(200)
     else
       $("#issue_#{issue.id}").fadeOut(200)
