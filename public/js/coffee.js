@@ -84,12 +84,13 @@
 }).call(this);
 
 (function() {
-  var addIssue, addProject, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
     $(window).focus(function(e) {
       return stopWorkLog();
     });
+    cdown();
     prepareNodeServer();
     prepareAddProject();
     prepareShowProjects();
@@ -100,8 +101,9 @@
     renderProjects();
     renderIssues();
     renderWorkLogs();
-    renderCalendars();
-    return loopRenderWorkLogs();
+    $(".calendar").hide();
+    loopRenderWorkLogs();
+    return loopFetch();
   };
 
   subWin = {};
@@ -153,13 +155,26 @@
       diffs: diffs,
       working_logs: working_logs
     };
-    debug("fetch diffs", diffs);
     url = "" + domain + "/api/v1/diffs.json";
-    return $.post(url, params, function(data) {
-      debug("callback data", data);
-      updtWorkLogServerIds(data);
-      sync(server, "server_ids", data.server_ids);
-      return last_fetch(now());
+    return $.ajax({
+      type: "POST",
+      url: url,
+      data: params,
+      complete: function(res) {
+        var data;
+
+        data = res.responseText;
+        data = JSON.parse(data);
+        updtWorkLogServerIds(data);
+        sync(server, "server_ids", data.server_ids);
+        sync(server, "projects", data.projects);
+        sync(server, "issues", data.issues);
+        sync(server, "work_logs", data.work_logs);
+        renderWorkLogs(server);
+        return last_fetch(now());
+      },
+      async: false,
+      dataType: "json"
     });
   };
 
@@ -224,12 +239,13 @@
   };
 
   sync_item = function(server, table_name, i) {
-    var issue, item, url;
+    var issue, item, project, url;
 
     if (i.project_id) {
-      i.project_id = db.one("projects", {
+      project = db.one("projects", {
         server_id: i.project_id
-      }).id;
+      });
+      i.project_id = project.id;
     }
     if (i.issue_id) {
       issue = db.one("issues", {
@@ -251,7 +267,13 @@
     item = db.one(table_name, {
       server_id: i.id
     });
+    if (!item) {
+      item = db.one(table_name, {
+        id: i.local_id
+      });
+    }
     if (item) {
+      item.server_id = i.id;
       i.id = item.id;
       item = i;
       return db.upd(table_name, item);
@@ -281,7 +303,7 @@
   prepareNodeServer = function() {
     var dbtype, url;
 
-    if (location.href.match("local") && !db.one("servers", {
+    if (!db.one("servers", {
       domain: "http://localhost:3000"
     })) {
       dbtype = "local";
@@ -379,7 +401,6 @@
       title = caseTitle + "_" + d.getFullYear() + zp(d.getMonth() + 1) + d.getDate() + ".json";
       a = $('<a id="download"></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).hide();
       $(".do_export").after(a);
-      console.log($("#download")[0]);
       $("#download")[0].click();
       return false;
     });
@@ -467,7 +488,7 @@
     if (project.url) {
       project_name = "<a href=\"" + project.url + "\" target=\"_blank\">" + project.name + "</a>";
     }
-    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n" + (innerLink()) + "\n<div class=\"span12\">\n<h1>\n  " + project_name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n<div class=\"edit\"> \n  <a href=\"#\" class=\"btn\">Edit</a>\n</div>\n</div>\n\n</div>");
+    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n" + (innerLink()) + "\n<div class=\"span12\">\n<h1>\n  " + project_name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n<div class=\"ddt\"> \n  <a href=\"#\" class=\"btn\">DDT</a>\n</div>\n<div class=\"edit\"> \n  <a href=\"#\" class=\"btn\">Edit</a>\n</div>\n</div>\n</div>");
     $("#project_" + project.id).hide();
     hl.enter("#project_" + project.id + " div div .input", function(e, target) {
       var $project, project_id, title;
@@ -484,6 +505,9 @@
     });
     hl.click("#project_" + project.id + " div .edit a", function(e, target) {
       return doEditProject(project.id);
+    });
+    hl.click("#project_" + project.id + " div .ddt a", function(e, target) {
+      return doDdtProject(project.id);
     });
     return $("#project_" + project.id + " div h1").droppable({
       over: function(event, ui) {
@@ -668,7 +692,7 @@
       id: issue_id
     });
     if (issue.will_start_at < now()) {
-      issue.will_start_at = now() + 12 * 3600;
+      issue.will_start_at = now() + 12 * 3600 + parseInt(Math.random(10) * 10000);
       db.upd("issues", issue);
       return $("#issue_" + issue.id).fadeOut(200);
     } else {
@@ -725,6 +749,24 @@
       db.upd("projects", project);
     }
     return location.reload();
+  };
+
+  doDdtProject = function(project_id) {
+    var issue, _i, _len, _ref, _results;
+
+    _ref = db.find("issues", {
+      project_id: project_id
+    });
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      issue = _ref[_i];
+      if (issue.will_start_at < now()) {
+        _results.push(doDdt(issue.id));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
   };
 
   doCards = function(issue_id) {
@@ -943,7 +985,7 @@
       fetch(server);
     }
     return setTimeout(function() {
-      return true;
+      return loopFetch();
     }, 1000 * 10);
   };
 
@@ -1120,6 +1162,24 @@
     return db.one("work_logs", cond);
   };
 
+  cdown = function() {
+    var end, start;
+
+    start = apDay(2007, 5, 11);
+    end = apDay(2017, 5, 11);
+    return $("#cdown").html("" + (addFigure(start)) + "<br />" + (addFigure(end)));
+  };
+
+  apDay = function(y, m, d) {
+    var apday, dayms, n, today;
+
+    today = new Date();
+    apday = new Date(y, m - 1, d);
+    dayms = 24 * 60 * 60 * 100;
+    n = Math.floor((apday.getTime() - today.getTime()) / dayms) + 1;
+    return n;
+  };
+
   window.db = db;
 
   zp = function(n) {
@@ -1128,6 +1188,16 @@
     } else {
       return '0' + n;
     }
+  };
+
+  addFigure = function(str) {
+    var num;
+
+    num = new String(str).replace(/,/g, "");
+    while (num !== num.replace(/^(-?\d+)(\d{3})/, "$1,$2")) {
+      num = num.replace(/^(-?\d+)(\d{3})/, "$1,$2");
+    }
+    return num;
   };
 
   $(function() {

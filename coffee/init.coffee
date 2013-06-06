@@ -2,6 +2,7 @@ init = () ->
   $(window).focus((e) ->
     stopWorkLog()
   )
+  cdown()
   prepareNodeServer()
   prepareAddProject()
   prepareShowProjects()
@@ -12,9 +13,10 @@ init = () ->
   renderProjects()
   renderIssues()
   renderWorkLogs()
-  renderCalendars()
+  #renderCalendars()
+  $(".calendar").hide()
   loopRenderWorkLogs()
-  #loopFetch()
+  loopFetch()
 
 subWin = {}
 
@@ -46,19 +48,26 @@ fetch = (server) ->
     diffs: diffs,
     working_logs: working_logs
   }
-  debug "fetch diffs", diffs
   url = "#{domain}/api/v1/diffs.json"
 
-  $.post(url, params, (data) ->
-    debug "callback data", data 
-    updtWorkLogServerIds(data)
-    sync(server, "server_ids", data.server_ids)
-    #sync(server, "projects", data.projects)
-    #sync(server, "issues", data.issues)
-    #sync(server, "work_logs", data.work_logs)
-    #renderWorkLogs(server)
-    last_fetch(now())
-  )
+  $.ajax({
+    type : "POST",
+    url  : url,
+    data : params,
+    complete: (res) ->
+      data = res.responseText
+      data = JSON.parse(data)
+      updtWorkLogServerIds(data)
+      sync(server, "server_ids", data.server_ids)
+      sync(server, "projects", data.projects)
+      sync(server, "issues", data.issues)
+      sync(server, "work_logs", data.work_logs)
+      renderWorkLogs(server)
+      last_fetch(now())
+    ,
+    async: false,
+    dataType: "json"
+  })
 
 updtWorkLogServerIds = (data) ->
   if data.working_log_server_ids
@@ -83,7 +92,8 @@ sync = (server, table_name, data) ->
 
 sync_item = (server, table_name, i) ->
   if i.project_id
-    i.project_id = db.one("projects", {server_id: i.project_id}).id
+    project = db.one("projects", {server_id: i.project_id})
+    i.project_id = project.id
   if i.issue_id
     issue = db.one("issues", {server_id: i.issue_id})
     if issue
@@ -97,7 +107,9 @@ sync_item = (server, table_name, i) ->
   if i.closed_at > 0
     i.is_closed = true
   item = db.one(table_name, {server_id: i.id})
+  item = db.one(table_name, {id: i.local_id}) unless item
   if item
+    item.server_id = i.id
     i.id = item.id
     item = i
     db.upd(table_name, item)
@@ -114,7 +126,7 @@ renderProjects = () ->
   $("#issues").append(innerLink())
 
 prepareNodeServer = () ->
-  if location.href.match("local") and !db.one("servers", {domain: "http://localhost:3000"}) 
+  unless db.one("servers", {domain: "http://localhost:3000"}) 
     dbtype = "local"
     url = "http://localhost:3000/api/users.json"
     $.get(url, (data) ->
@@ -195,7 +207,6 @@ prepareDoExport = () ->
 
     a = $('<a id="download"></a>').text("download").attr("href", url).attr("target", '_blank').attr("download", title).hide()
     $(".do_export").after(a)
-    console.log $("#download")[0]
     $("#download")[0].click()
     return false
   )
@@ -265,11 +276,13 @@ renderProject = (project) ->
       <input type=\"text\" class=\"input\" />
       <input type=\"submit\" value=\"add issue\" class=\"btn\" />
     </div>
+    <div class=\"ddt\"> 
+      <a href="#" class=\"btn\">DDT</a>
+    </div>
     <div class=\"edit\"> 
       <a href="#" class=\"btn\">Edit</a>
     </div>
     </div>
-
     </div>
   """)
   $("#project_#{project.id}").hide()
@@ -286,6 +299,10 @@ renderProject = (project) ->
 
   hl.click("#project_#{project.id} div .edit a", (e, target)->
     doEditProject(project.id)
+  )
+
+  hl.click("#project_#{project.id} div .ddt a", (e, target)->
+    doDdtProject(project.id)
   )
 
   $("#project_#{project.id} div h1").droppable({
@@ -406,7 +423,7 @@ prepareDD = (issue_id) ->
 doDdt = (issue_id) ->
   issue = db.one("issues", {id: issue_id})
   if issue.will_start_at < now()
-    issue.will_start_at = now() + 12*3600
+    issue.will_start_at = now() + 12*3600 + parseInt(Math.random(10)*10000)
     db.upd("issues", issue)
     $("#issue_#{issue.id}").fadeOut(200)
   else
@@ -442,6 +459,10 @@ doEditProject = (project_id) ->
   if project.url.length > 1
     db.upd("projects", project)
   location.reload()
+
+doDdtProject = (project_id) ->
+  for issue in db.find("issues", {project_id: project_id})
+    doDdt(issue.id) if issue.will_start_at < now()
 
 doCards = (issue_id = null) ->
   updateWorkingLog(null, issue_id)
@@ -574,10 +595,7 @@ renderWorkingLog = () ->
     issue = db.one("issues", {id: wl.issue_id})
     $(".hero-unit h1").html(issue.title)
     $(".hero-unit p").html(issue.body)
-
   $("title").html(time)
-
-
 
 loopRenderWorkLogs = () ->
   renderWorkingLog()
@@ -589,8 +607,7 @@ loopFetch = () ->
   for server in db.find("servers")
     fetch(server)
   setTimeout(()->
-    return true
-    #loopFetch()
+    loopFetch()
   ,1000*10)
 
 last_fetch = (sec = null) ->
@@ -689,10 +706,28 @@ working_log = (issue_id=null, is_start=true) ->
   cond = {end_at: null}
   db.one("work_logs", cond)
 
+cdown = () ->
+  start = apDay(2007, 5, 11)
+  end   = apDay(2017, 5, 11)
+  $("#cdown").html("#{addFigure(start)}<br />#{addFigure(end)}")
+
+apDay = (y,m,d) ->
+  today = new Date()
+  apday = new Date(y,m-1,d)
+  dayms = 24 * 60 * 60 * 100
+  n = Math.floor((apday.getTime()-today.getTime())/dayms) + 1
+  return n
+
 window.db = db
 
 zp = (n) ->
   if n >= 10 then n else '0' + n
+
+addFigure = (str) ->
+  num = new String(str).replace(/,/g, "")
+  while num != num.replace(/^(-?\d+)(\d{3})/, "$1,$2")
+    num = num.replace(/^(-?\d+)(\d{3})/, "$1,$2")
+  return num
 
 $(() ->
   init()

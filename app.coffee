@@ -11,6 +11,10 @@ app.get('*', (req, res) ->
     node_dev(req, res)
   else if req.url == "/projects"
     node_projects(req, res)
+  else if req.url == "/issues"
+    node_issues(req, res)
+  else if req.url == "/work_logs"
+    node_work_logs(req, res)
   else if req.url.match("api")
     api(req, res)
   else
@@ -26,15 +30,21 @@ api = (req, res) ->
     body = JSON.stringify({id: 1})
   else if(req.url.match("diff"))
     save_diffs(req.body)
-    body = JSON.stringify(callback())
+    body = JSON.stringify(callback(req.body.last_fetch))
   else
     body = JSON.stringify({id: req.query["id"]})
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Content-Length', body.length)
+  #res.setHeader('Content-Length', body.length)
   res.end(body)
 
 save_diffs = (data) ->
+  ###
+  db.del("projects")
+  db.del("issues")
+  db.del("work_logs")
+  JSRel.free("crowdsourcing3")
+  ###
   server = null
   if data.diffs
     sync(server, "projects", data.diffs.projects)
@@ -55,7 +65,9 @@ schema = {
   projects: {
     name: "",
     body: "",
+    url: "",
     server_id: 0,
+    origin_at: 0,
   },
   issues: {
     title: "",
@@ -65,9 +77,11 @@ schema = {
     is_ddt: "off",
     closed_at: 0,
     user_id: 0,
+    url: "",
     assignee_id: 0,
     will_start_on: "",
-    parent_id:0
+    parent_id:0,
+    origin_at: 0,
   },
   work_logs: {
     issue_id: 0,
@@ -83,22 +97,38 @@ schema = {
   },
 }
 
-
 working_log = null
 
 #fetch = () ->
-callback = () ->
+callback = (last_fetch) ->
   projects = []
   issues = []
-  for project in db.find("projects")
-    project.server_id = project.id
-    delete project.id
-    projects.push(project)
-  for issue in db.find("issues")
-    issue.server_id = issue.id
-    delete issue.id
-    issues.push(issue)
-    
+  work_logs = []
+  projects = db.find("projects", { upd_at: {le: last_fetch}})
+  if projects[0]
+    for project in projects
+      delete project.ins_at
+      delete project.upd_at
+      project.server_id = project.id
+      project.local_id = project.server_id
+      projects.push(project)
+  issues = db.find("issues", { upd_at: {le: last_fetch}})
+  if issues
+    for issue in issues
+      delete issue.ins_at
+      delete issue.upd_at
+      issue.server_id = issue.id
+      issue.local_id = issue.server_id
+      issues.push(issue)
+  work_logs = db.find("work_logs", { upd_at: {le: last_fetch}})
+  if work_logs
+    for work_log in work_logs
+      delete work_log.ins_at
+      delete work_log.upd_at
+      work_log.server_id = work_log.id
+      work_log.local_id = work_log.server_id
+      work_logs.push(work_log)
+
   project_ids = {}
   issue_ids = {}
   work_log_ids = {}
@@ -106,21 +136,21 @@ callback = () ->
     project_ids[project.server_id] = project.id
   for issue in issues
     issue_ids[issue.server_id] = issue.id
-
-  work_log_ids = [] #TODO
-  work_logs = [] #TODO
+  for work_log in work_logs
+    work_log_ids[work_log.server_id] = work_log.id
 
   server_ids = {
     projects:  project_ids,
     issue:  issue_ids,
     work_logs:  work_log_ids
   }
-  return {
+  res =  {
     projects: projects,
     issues: issues,
     work_logs: work_logs,
     server_ids: server_ids
   }
+  return res
 
 sync = (server, table_name, data) ->
   if table_name == "server_ids"
@@ -136,31 +166,31 @@ sync = (server, table_name, data) ->
 
 sync_item = (server, table_name, i) ->
   if i.project_id
-    i.project_id = db.one("projects", {server_id: parseInt(i.project_id)}).id
+    project = db.one("projects", {server_id: parseInt(i.project_id)})
+    i.project_id = project.id
   if i.issue_id
     issue = db.one("issues", {server_id: parseInt(i.issue_id)})
     if issue
       i.issue_id = issue.id
-    if i.closed_at > 0
-      i.is_closed = true
-  #item = db.one(table_name, {server_id: i.id})
   item = db.one(table_name, {server_id: i.local_id})
   if item
     i.id = item.id
     item = i
     db.upd(table_name, item)
   else
-    #i.server_id = i.id
     i.server_id = parseInt(i.local_id)
-    #delete i.id
     delete i.local_id
+    is_new = true
     if table_name == "projects"
-      return false if db.one("projects", {name: i.name, ins_at: i.ins_at})
+      is_new = false if db.one("projects", {name: i.name, origin_at: parseInt(i.ins_at)})
     if table_name == "issues"
-      return false if db.one("issues", {title: i.title, ins_at: i.ins_at})
+      is_new = false if db.one("issues", {title: i.title, origin_at: parseInt(i.ins_at)})
     if table_name == "work_logs"
-      return false if db.one("work_logs", {ins_at: i.ins_at})
-    item = db.ins(table_name, i)
+      is_new = false if db.one("work_logs", {started_at: parseInt(i.started_at)})
+    if is_new
+      if table_name == "projects" or table_name == "issues"
+        i.origin_at = i.ins_at
+      item = db.ins(table_name, i)
 
 addIssue = (project_id, title) ->
   issue = db.ins("issues", {title: title, project_id: project_id, body:"", assignee_id:1, user_id:1})
@@ -204,8 +234,7 @@ setInfo = (key, val) ->
     info = db.ins("infos", {key: key, val: val})
   info
 
-
-db = JSRel.use("crowdsourcing", {
+db = JSRel.use("crowdsourcing3", {
   schema: schema,
   autosave: true
 })
@@ -289,11 +318,38 @@ node_projects = (req, res)->
   body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>"
   body += "<hr />"
   for project in db.find("projects")
-    body += "#{project.name}<br />"
+    body += "<h2>#{project.name}</h2>"
+    for key, val of project
+      body += "#{key} : #{val}<br />" unless key == "name"
+
   body += "<hr />"
-  for i in req
-    body += i + ' is ' + req[i]
-    body += "<br />"
+  body += "<a href=\"/\">back</a>"
+  res.setHeader('Content-Type', 'text/html')
+  res.setHeader('Content-Length', body.length)
+  res.end(body)
+
+node_issues = (req, res)->
+  body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>"
+  body += "<hr />"
+  for issue in db.find("issues")
+    body += "<h2>#{issue.title}</h2>"
+    for key, val of issue
+      body += "#{key} : #{val}<br />" unless key == "title"
+
+  body += "<hr />"
+  body += "<a href=\"/\">back</a>"
+  res.setHeader('Content-Type', 'text/html')
+  res.setHeader('Content-Length', body.length)
+  res.end(body)
+
+node_work_logs = (req, res)->
+  body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>"
+  body += "<hr />"
+  for work_log in db.find("work_logs")
+    body += "<h2>#{work_log.title}</h2>"
+    for key, val of work_log
+      body += "#{key} : #{val}<br />" unless key == "title"
+
   body += "<hr />"
   body += "<a href=\"/\">back</a>"
   res.setHeader('Content-Type', 'text/html')

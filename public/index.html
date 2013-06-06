@@ -21,7 +21,6 @@
 <script src="./js_views/issue.js"></script>
 <!--<script src="/socket.io/socket.io.js"></script>-->
 <script src="./js/coffee.js"></script>
-
 </head>
 <body>
 <div class="navbar navbar-inverse navbar-fixed-top">
@@ -40,8 +39,8 @@
         </p>
         -->
         <ul class="nav">
-          <li class="active"><a href="/">Home</a></li>
         <!--
+          <li class="active"><a href="/">Home</a></li>
           <li><a href="/node_dev">Node Dev</a></li>
         -->
         </ul>
@@ -55,6 +54,7 @@
     <div class="span3">
       <div class="well sidebar-nav"> 
         <ul class="nav nav-list" id="new_project">
+          <li><a id="cdown" href="https://ruffnote.com/pandeiro245/mindia20170511" target="_blank">now loading...</a></li>
           <li style="margin-bottom:10px;">
             <button class="btn add_project" type="button">add project</button>
           </li>
@@ -101,7 +101,7 @@
     </div><!--/span-->
   </div>
 
-  <div class="row-fluid">
+  <div class="row-fluid calendar">
     <div class="span12 this_month" style="clear:both; margin-top:30px;">
     <h2></h2>
     <table class="table table-bordered">
@@ -164,7 +164,7 @@
   </div><!--/row-->
 
 
-  <div class="row-fluid">
+  <div class="row-fluid calendar">
     <div class="span12 next_month" style="clear:both; margin-top:30px;">
     <h2></h2>
     <table class="table table-bordered">

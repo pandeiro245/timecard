@@ -1,5 +1,5 @@
 (function() {
-  var JSRel, addIssue, addProject, api, app, buffer, callback, db, dispTime, express, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, http, io, last_fetch, node_dev, node_projects, now, pushIfHasIssue, save_diffs, schema, server, setInfo, sync, sync_item, turnback, uploading_icon, working_log, zero;
+  var JSRel, addIssue, addProject, api, app, buffer, callback, db, dispTime, express, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, http, io, last_fetch, node_dev, node_issues, node_projects, node_work_logs, now, pushIfHasIssue, save_diffs, schema, server, setInfo, sync, sync_item, turnback, uploading_icon, working_log, zero;
 
   JSRel = require('jsrel');
 
@@ -20,6 +20,10 @@
       return node_dev(req, res);
     } else if (req.url === "/projects") {
       return node_projects(req, res);
+    } else if (req.url === "/issues") {
+      return node_issues(req, res);
+    } else if (req.url === "/work_logs") {
+      return node_work_logs(req, res);
     } else if (req.url.match("api")) {
       return api(req, res);
     } else {
@@ -40,7 +44,7 @@
       });
     } else if (req.url.match("diff")) {
       save_diffs(req.body);
-      body = JSON.stringify(callback());
+      body = JSON.stringify(callback(req.body.last_fetch));
     } else {
       body = JSON.stringify({
         id: req.query["id"]
@@ -48,11 +52,16 @@
     }
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Length', body.length);
     return res.end(body);
   };
 
   save_diffs = function(data) {
+    /*
+    db.del("projects")
+    db.del("issues")
+    db.del("work_logs")
+    JSRel.free("crowdsourcing3")
+    */
     server = null;
     if (data.diffs) {
       sync(server, "projects", data.diffs.projects);
@@ -75,7 +84,9 @@
     projects: {
       name: "",
       body: "",
-      server_id: 0
+      url: "",
+      server_id: 0,
+      origin_at: 0
     },
     issues: {
       title: "",
@@ -85,9 +96,11 @@
       is_ddt: "off",
       closed_at: 0,
       user_id: 0,
+      url: "",
       assignee_id: 0,
       will_start_on: "",
-      parent_id: 0
+      parent_id: 0,
+      origin_at: 0
     },
     work_logs: {
       issue_id: 0,
@@ -105,49 +118,84 @@
 
   working_log = null;
 
-  callback = function() {
-    var issue, issue_ids, issues, project, project_ids, projects, server_ids, work_log_ids, work_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
+  callback = function(last_fetch) {
+    var issue, issue_ids, issues, project, project_ids, projects, res, server_ids, work_log, work_log_ids, work_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n;
 
     projects = [];
     issues = [];
-    _ref = db.find("projects");
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      project = _ref[_i];
-      project.server_id = project.id;
-      delete project.id;
-      projects.push(project);
+    work_logs = [];
+    projects = db.find("projects", {
+      upd_at: {
+        le: last_fetch
+      }
+    });
+    if (projects[0]) {
+      for (_i = 0, _len = projects.length; _i < _len; _i++) {
+        project = projects[_i];
+        delete project.ins_at;
+        delete project.upd_at;
+        project.server_id = project.id;
+        project.local_id = project.server_id;
+        projects.push(project);
+      }
     }
-    _ref1 = db.find("issues");
-    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      issue = _ref1[_j];
-      issue.server_id = issue.id;
-      delete issue.id;
-      issues.push(issue);
+    issues = db.find("issues", {
+      upd_at: {
+        le: last_fetch
+      }
+    });
+    if (issues) {
+      for (_j = 0, _len1 = issues.length; _j < _len1; _j++) {
+        issue = issues[_j];
+        delete issue.ins_at;
+        delete issue.upd_at;
+        issue.server_id = issue.id;
+        issue.local_id = issue.server_id;
+        issues.push(issue);
+      }
+    }
+    work_logs = db.find("work_logs", {
+      upd_at: {
+        le: last_fetch
+      }
+    });
+    if (work_logs) {
+      for (_k = 0, _len2 = work_logs.length; _k < _len2; _k++) {
+        work_log = work_logs[_k];
+        delete work_log.ins_at;
+        delete work_log.upd_at;
+        work_log.server_id = work_log.id;
+        work_log.local_id = work_log.server_id;
+        work_logs.push(work_log);
+      }
     }
     project_ids = {};
     issue_ids = {};
     work_log_ids = {};
-    for (_k = 0, _len2 = projects.length; _k < _len2; _k++) {
-      project = projects[_k];
+    for (_l = 0, _len3 = projects.length; _l < _len3; _l++) {
+      project = projects[_l];
       project_ids[project.server_id] = project.id;
     }
-    for (_l = 0, _len3 = issues.length; _l < _len3; _l++) {
-      issue = issues[_l];
+    for (_m = 0, _len4 = issues.length; _m < _len4; _m++) {
+      issue = issues[_m];
       issue_ids[issue.server_id] = issue.id;
     }
-    work_log_ids = [];
-    work_logs = [];
+    for (_n = 0, _len5 = work_logs.length; _n < _len5; _n++) {
+      work_log = work_logs[_n];
+      work_log_ids[work_log.server_id] = work_log.id;
+    }
     server_ids = {
       projects: project_ids,
       issue: issue_ids,
       work_logs: work_log_ids
     };
-    return {
+    res = {
       projects: projects,
       issues: issues,
       work_logs: work_logs,
       server_ids: server_ids
     };
+    return res;
   };
 
   sync = function(server, table_name, data) {
@@ -186,12 +234,13 @@
   };
 
   sync_item = function(server, table_name, i) {
-    var issue, item;
+    var is_new, issue, item, project;
 
     if (i.project_id) {
-      i.project_id = db.one("projects", {
+      project = db.one("projects", {
         server_id: parseInt(i.project_id)
-      }).id;
+      });
+      i.project_id = project.id;
     }
     if (i.issue_id) {
       issue = db.one("issues", {
@@ -199,9 +248,6 @@
       });
       if (issue) {
         i.issue_id = issue.id;
-      }
-      if (i.closed_at > 0) {
-        i.is_closed = true;
       }
     }
     item = db.one(table_name, {
@@ -214,30 +260,36 @@
     } else {
       i.server_id = parseInt(i.local_id);
       delete i.local_id;
+      is_new = true;
       if (table_name === "projects") {
         if (db.one("projects", {
           name: i.name,
-          ins_at: i.ins_at
+          origin_at: parseInt(i.ins_at)
         })) {
-          return false;
+          is_new = false;
         }
       }
       if (table_name === "issues") {
         if (db.one("issues", {
           title: i.title,
-          ins_at: i.ins_at
+          origin_at: parseInt(i.ins_at)
         })) {
-          return false;
+          is_new = false;
         }
       }
       if (table_name === "work_logs") {
         if (db.one("work_logs", {
-          ins_at: i.ins_at
+          started_at: parseInt(i.started_at)
         })) {
-          return false;
+          is_new = false;
         }
       }
-      return item = db.ins(table_name, i);
+      if (is_new) {
+        if (table_name === "projects" || table_name === "issues") {
+          i.origin_at = i.ins_at;
+        }
+        return item = db.ins(table_name, i);
+      }
     }
   };
 
@@ -324,7 +376,7 @@
     return info;
   };
 
-  db = JSRel.use("crowdsourcing", {
+  db = JSRel.use("crowdsourcing3", {
     schema: schema,
     autosave: true
   });
@@ -452,20 +504,66 @@
   };
 
   node_projects = function(req, res) {
-    var body, i, project, _i, _j, _len, _len1, _ref;
+    var body, key, project, val, _i, _len, _ref;
 
     body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>";
     body += "<hr />";
     _ref = db.find("projects");
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       project = _ref[_i];
-      body += "" + project.name + "<br />";
+      body += "<h2>" + project.name + "</h2>";
+      for (key in project) {
+        val = project[key];
+        if (key !== "name") {
+          body += "" + key + " : " + val + "<br />";
+        }
+      }
     }
     body += "<hr />";
-    for (_j = 0, _len1 = req.length; _j < _len1; _j++) {
-      i = req[_j];
-      body += i + ' is ' + req[i];
-      body += "<br />";
+    body += "<a href=\"/\">back</a>";
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Length', body.length);
+    return res.end(body);
+  };
+
+  node_issues = function(req, res) {
+    var body, issue, key, val, _i, _len, _ref;
+
+    body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>";
+    body += "<hr />";
+    _ref = db.find("issues");
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      issue = _ref[_i];
+      body += "<h2>" + issue.title + "</h2>";
+      for (key in issue) {
+        val = issue[key];
+        if (key !== "title") {
+          body += "" + key + " : " + val + "<br />";
+        }
+      }
+    }
+    body += "<hr />";
+    body += "<a href=\"/\">back</a>";
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Length', body.length);
+    return res.end(body);
+  };
+
+  node_work_logs = function(req, res) {
+    var body, key, val, work_log, _i, _len, _ref;
+
+    body = "<meta charset=\"UTF-8\" /><a href=\"/\">back</a>";
+    body += "<hr />";
+    _ref = db.find("work_logs");
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      work_log = _ref[_i];
+      body += "<h2>" + work_log.title + "</h2>";
+      for (key in work_log) {
+        val = work_log[key];
+        if (key !== "title") {
+          body += "" + key + " : " + val + "<br />";
+        }
+      }
     }
     body += "<hr />";
     body += "<a href=\"/\">back</a>";
