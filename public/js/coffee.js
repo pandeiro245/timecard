@@ -84,14 +84,15 @@
 }).call(this);
 
 (function() {
-  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCards, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
 
   init = function() {
-    $(window).focus(function(e) {
-      return stopWorkLog();
-    });
+    /*
+    $(window).focus((e) ->
+      stopWorkLog()
+    )
+    */
     cdown();
-    prepareNodeServer();
     prepareAddProject();
     prepareShowProjects();
     prepareAddServer();
@@ -102,8 +103,7 @@
     renderIssues();
     renderWorkLogs();
     $(".calendar").hide();
-    loopRenderWorkLogs();
-    return loopFetch();
+    return loopRenderWorkLogs();
   };
 
   subWin = {};
@@ -566,7 +566,7 @@
       renderIssue(issue, null, i);
       i = i + 0;
     }
-    return doCards();
+    return doCard();
   };
 
   prepareCards = function(issue_id) {
@@ -594,7 +594,7 @@
         return false;
       });
       $("#issue_" + issue_id + " div div .card").click(function() {
-        doCards(issue_id);
+        doCard(issue_id);
         return false;
       });
       $("#issue_" + issue_id + " div div .ddt").click(function() {
@@ -769,7 +769,7 @@
     return _results;
   };
 
-  doCards = function(issue_id) {
+  doCard = function(issue_id) {
     if (issue_id == null) {
       issue_id = null;
     }
@@ -785,7 +785,7 @@
   };
 
   updateWorkingLog = function(is_start, issue_id) {
-    var issue, project, wl;
+    var $all_cards, $issue_cards, issue, project, wl;
 
     if (is_start == null) {
       is_start = null;
@@ -793,9 +793,10 @@
     if (issue_id == null) {
       issue_id = null;
     }
-    $(".card").html("Start");
-    $(".card").removeClass("btn-warning");
-    $(".card").addClass("btn-primary");
+    $all_cards = $(".card");
+    $all_cards.html("Start");
+    $all_cards.removeClass("btn-warning");
+    $all_cards.addClass("btn-primary");
     wl = working_log();
     if (is_start === false) {
       issue_id = wl.issue_id;
@@ -832,9 +833,11 @@
       issue_id = working_log().issue_id;
     }
     if (working_log()) {
-      $("#issue_" + issue_id + " .card").html("Stop");
-      $("#issue_" + issue_id + " .card").removeClass("btn-primary");
-      $("#issue_" + issue_id + " .card").addClass("btn-warning");
+      $issue_cards = $(".issue_" + issue_id + " .card");
+      console.log($issue_cards);
+      $issue_cards.html("Stop");
+      $issue_cards.removeClass("btn-primary");
+      $issue_cards.addClass("btn-warning");
     }
     return renderWorkLogs();
   };
@@ -862,7 +865,7 @@
   };
 
   renderWorkLogs = function(server) {
-    var issue, s, stop, url, wl, work_log, _i, _len, _ref, _results;
+    var btn_type, disp, issue, s, url, wl, work_log, _i, _len, _ref, _results;
 
     if (server == null) {
       server = null;
@@ -892,22 +895,28 @@
           title: "issue名取得中"
         };
       }
-      stop = "";
-      if (!work_log.end_at) {
-        stop = "<div style=\"padding:10px;\">\n<a href=\"#\" class=\"cardw btn btn-warning\">STOP</a>\n</div>";
+      disp = "Start";
+      btn_type = "btn-primary";
+      if (working_log() && working_log().issue_id === work_log.issue_id) {
+        disp = "Stop";
+        btn_type = "btn-warning";
       }
       s = new Date(work_log.started_at * 1000);
       $(".md_" + (s.getMonth() + 1) + "_" + (s.getDate())).append("<div>" + issue.title + "</div>");
-      $("#work_logs").append("<tr class=\"work_log_" + work_log.id + "\">\n<td>\n" + issue.title + "\n</td>\n<td>\n" + (dispDate(work_log)) + "\n</td>\n<td>\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n</td>\n<td>\n" + (work_log.server_id ? "" : uicon) + "\n" + stop + "\n</td>\n</tr>");
-      $(".cardw").click(function() {
-        var issue_id;
+      $("#work_logs").append("<tr class=\"work_log_" + work_log.id + "\">\n<td>\n" + issue.title + "\n</td>\n<td>\n" + (dispDate(work_log)) + "\n</td>\n<td>\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n</td>\n<td>\n" + (work_log.server_id ? "" : uicon) + "\n<div class=\"work_log_" + work_log.id + " issue_" + issue.id + "\" style=\"padding:10px;\">\n<a href=\"#\" class=\"card btn " + btn_type + "\" data-issue-id=\"" + issue.id + "\">" + disp + "</a>\n</div>\n</td>\n</tr>");
+      $(".work_log_" + work_log.id + " .card").click(function() {
+        var work_log_id;
 
-        issue_id = $(this).parent().parent().parent().attr("class").replace("work_log_", "");
-        updateWorkingLog(false, parseInt(issue_id));
+        work_log_id = parseInt($(this).attr("data-issue-id"));
+        doCard(work_log_id);
         return false;
       });
-      if (!work_log.end_at) {
-        _results.push(wl = work_log);
+      if (false) {
+        if (!work_log.end_at) {
+          _results.push(wl = work_log);
+        } else {
+          _results.push(void 0);
+        }
       } else {
         _results.push(void 0);
       }

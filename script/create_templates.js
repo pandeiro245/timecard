@@ -13,3 +13,4 @@ function fileSaveContents( filename , str ){
   return fileContent;
 };
 console.log( fileSaveContents( './public/js_views/issue.js' , issue ) );
+console.log("created!");

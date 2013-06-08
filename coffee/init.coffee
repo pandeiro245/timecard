@@ -1,9 +1,11 @@
 init = () ->
+  ###
   $(window).focus((e) ->
     stopWorkLog()
   )
+  ###
   cdown()
-  prepareNodeServer()
+  #prepareNodeServer()
   prepareAddProject()
   prepareShowProjects()
   prepareAddServer()
@@ -16,7 +18,7 @@ init = () ->
   #renderCalendars()
   $(".calendar").hide()
   loopRenderWorkLogs()
-  loopFetch()
+  #loopFetch()
 
 subWin = {}
 
@@ -333,7 +335,7 @@ renderIssues = (issues=null) ->
   for issue in issues
     renderIssue(issue, null, i)
     i = i + 0
-  doCards()
+  doCard()
 
 prepareCards = (issue_id) ->
   $(() ->
@@ -344,7 +346,6 @@ prepareCards = (issue_id) ->
       url = project.url if project.url and !url
       if url
         startWorkLog(issue_id)
-        #subWin = window.open("./sub_win.html##{$e.html()}", "issue_#{issue_id}")
         subWin = window.open(url, "issue_#{issue_id}")
       else
         $e = $(this).parent().find(".body")
@@ -352,7 +353,7 @@ prepareCards = (issue_id) ->
       return false
     )
     $("#issue_#{issue_id} div div .card").click(() ->
-      doCards(issue_id)
+      doCard(issue_id)
       return false
     )
     $("#issue_#{issue_id} div div .ddt").click(() ->
@@ -464,7 +465,7 @@ doDdtProject = (project_id) ->
   for issue in db.find("issues", {project_id: project_id})
     doDdt(issue.id) if issue.will_start_at < now()
 
-doCards = (issue_id = null) ->
+doCard = (issue_id = null) ->
   updateWorkingLog(null, issue_id)
 
 startWorkLog = (issue_id) ->
@@ -474,9 +475,10 @@ stopWorkLog = () ->
   updateWorkingLog(false)
 
 updateWorkingLog = (is_start=null, issue_id=null) ->
-  $(".card").html("Start")
-  $(".card").removeClass("btn-warning")
-  $(".card").addClass("btn-primary")
+  $all_cards = $(".card")
+  $all_cards.html("Start")
+  $all_cards.removeClass("btn-warning")
+  $all_cards.addClass("btn-primary")
   wl = working_log()
   issue_id = wl.issue_id if is_start == false
   if wl && issue_id #stop
@@ -499,9 +501,11 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
     
   issue_id = working_log().issue_id if working_log()
   if working_log()
-    $("#issue_#{issue_id} .card").html("Stop")
-    $("#issue_#{issue_id} .card").removeClass("btn-primary")
-    $("#issue_#{issue_id} .card").addClass("btn-warning")
+    $issue_cards = $(".issue_#{issue_id} .card")
+    console.log $issue_cards
+    $issue_cards.html("Stop")
+    $issue_cards.removeClass("btn-primary")
+    $issue_cards.addClass("btn-warning")
   renderWorkLogs()
 
 addIssue = (project_id, title) ->
@@ -526,13 +530,11 @@ renderWorkLogs = (server=null) ->
       issue = db.one("issues", {id: work_log.issue_id})
     else
       issue = {title: "issue名取得中"}
-    stop = ""
-    unless work_log.end_at
-      stop = """
-        <div style=\"padding:10px;\">
-        <a href=\"#\" class=\"cardw btn btn-warning\">STOP</a>
-        </div>
-      """
+    disp = "Start"
+    btn_type = "btn-primary"
+    if working_log() && working_log().issue_id == work_log.issue_id
+      disp = "Stop"
+      btn_type = "btn-warning"
     s = new Date(work_log.started_at*1000)
     $(".md_#{s.getMonth()+1}_#{s.getDate()}").append("<div>#{issue.title}</div>")
     $("#work_logs").append("""
@@ -548,17 +550,20 @@ renderWorkLogs = (server=null) ->
       </td>
       <td>
       #{if work_log.server_id then "" else uicon}
-      #{stop}
+      <div class="work_log_#{work_log.id} issue_#{issue.id}" style=\"padding:10px;\">
+      <a href=\"#\" class=\"card btn #{btn_type}\" data-issue-id=\"#{issue.id}\">#{disp}</a>
+      </div>
       </td>
       </tr>
     """)
-    $(".cardw").click(() ->
-      issue_id = $(this).parent().parent().parent().attr("class").replace("work_log_", "") 
-      updateWorkingLog(false, parseInt(issue_id))
+    $(".work_log_#{work_log.id} .card").click(() ->
+      work_log_id = parseInt($(this).attr("data-issue-id"))
+      doCard(work_log_id)
       return false
     )
-    if !work_log.end_at
-      wl = work_log
+    if false
+      if !work_log.end_at
+        wl = work_log
 
 renderCalendars = () ->
   now = new Date()
