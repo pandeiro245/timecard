@@ -1,9 +1,7 @@
 init = () ->
-  ###
   $(window).focus((e) ->
     stopWorkLog()
   )
-  ###
   cdown()
   #prepareNodeServer()
   prepareAddProject()
@@ -43,7 +41,10 @@ fetch = (server) ->
   wlsis = db.one("infos", {key: "working_log_server_ids"})
   if wlsis and wlsis.val
     for working_log_server_id in wlsis.val.split(",")
-      working_logs.push(db.one("work_logs", {server_id: parseInt(working_log_server_id)}))
+      server_id = parseInt(working_log_server_id)
+      working_logs.push(db.one(
+        "work_logs", {server_id: server_id})
+      )
   params = {
     token: token,
     last_fetch: last_fetch(),
@@ -74,7 +75,10 @@ fetch = (server) ->
 updtWorkLogServerIds = (data) ->
   if data.working_log_server_ids
     wlsis = db.one("infos", {key: "working_log_server_ids"})
-    wlsis = db.ins("infos", {key: "working_log_server_ids"}) unless wlsis
+    unless wlsis
+      wlsis = db.ins("infos",
+        {key: "working_log_server_ids"}
+      )
     wlsis.val = data.working_log_server_ids.join(",")
     db.upd("infos", wlsis)
 
@@ -101,7 +105,8 @@ sync_item = (server, table_name, i) ->
     if issue
       i.issue_id = issue.id
     else
-      url = "#{server.domain}/api/v1/issues/#{i.issue_id}.json?token=#{server.token}"
+      url = "#{server.domain}/api/v1/issues/"
+      url += "#{i.issue_id}.json?token=#{server.token}"
       $.get(url, (item) ->
         sync_item(server, "issues", item)
       )
@@ -121,14 +126,16 @@ sync_item = (server, table_name, i) ->
     item = db.ins(table_name, i)
 
 renderProjects = () ->
-  projects = db.find("projects", null, {order: {upd_at: "desc"}})
+  projects = db.find(
+    "projects", null, {order: {upd_at: "desc"}}
+  )
   $("#issues").html("")
   for project in projects
     renderProject(project)
   $("#issues").append(innerLink())
 
 prepareNodeServer = () ->
-  unless db.one("servers", {domain: "http://localhost:3000"}) 
+  unless db.one("servers", {domain: "http://localhost:3000"})
     dbtype = "local"
     url = "http://localhost:3000/api/users.json"
     $.get(url, (data) ->
@@ -148,7 +155,9 @@ prepareShowProjects = () ->
 
 prepareAddServer = () ->
   hl.click(".add_server", (e, target)->
-    domain = prompt('please input domain', 'http://crowdsourcing.dev')
+    domain = prompt(
+      'please input domain', 'http://crowdsourcing.dev
+    ')
     if domain.match("crowdsourcing") or domain.match("cs.mindia.jp")
       dbtype = "cs"
       token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c')
@@ -539,8 +548,8 @@ renderWorkLogs = (server=null) ->
     $(".md_#{s.getMonth()+1}_#{s.getDate()}").append("<div>#{issue.title}</div>")
     $("#work_logs").append("""
       <tr class=\"work_log_#{work_log.id}\">
-      <td>
-      #{issue.title}
+      <td class=\"word_break\">
+      #{wbr(issue.title, 9)}
       </td>
       <td>
       #{dispDate(work_log)}
@@ -556,6 +565,7 @@ renderWorkLogs = (server=null) ->
       </td>
       </tr>
     """)
+
     $(".work_log_#{work_log.id} .card").click(() ->
       work_log_id = parseInt($(this).attr("data-issue-id"))
       doCard(work_log_id)
@@ -564,6 +574,12 @@ renderWorkLogs = (server=null) ->
     if false
       if !work_log.end_at
         wl = work_log
+
+
+wbr = (str, num) ->
+  return str.replace(RegExp("(\\w{" + num + "})(\\w)", "g"), (all,text,char) ->
+    return text + "<wbr>" + char
+  )
 
 renderCalendars = () ->
   now = new Date()

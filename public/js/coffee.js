@@ -84,14 +84,12 @@
 }).call(this);
 
 (function() {
-  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, working_log, zero, zp;
+  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
 
   init = function() {
-    /*
-    $(window).focus((e) ->
-      stopWorkLog()
-    )
-    */
+    $(window).focus(function(e) {
+      return stopWorkLog();
+    });
     cdown();
     prepareAddProject();
     prepareShowProjects();
@@ -109,7 +107,7 @@
   subWin = {};
 
   fetch = function(server) {
-    var diffs, domain, issue, issues, params, project, projects, token, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
+    var diffs, domain, issue, issues, params, project, projects, server_id, token, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
 
     domain = server.domain;
     token = server.token;
@@ -144,8 +142,9 @@
       _ref3 = wlsis.val.split(",");
       for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
         working_log_server_id = _ref3[_l];
+        server_id = parseInt(working_log_server_id);
         working_logs.push(db.one("work_logs", {
-          server_id: parseInt(working_log_server_id)
+          server_id: server_id
         }));
       }
     }
@@ -254,7 +253,8 @@
       if (issue) {
         i.issue_id = issue.id;
       } else {
-        url = "" + server.domain + "/api/v1/issues/" + i.issue_id + ".json?token=" + server.token;
+        url = "" + server.domain + "/api/v1/issues/";
+        url += "" + i.issue_id + ".json?token=" + server.token;
         $.get(url, function(item) {
           return sync_item(server, "issues", item);
         });
@@ -332,7 +332,8 @@
     return hl.click(".add_server", function(e, target) {
       var dbtype, domain, token, url;
 
-      domain = prompt('please input domain', 'http://crowdsourcing.dev');
+      domain = prompt('please input domain', 'http://crowdsourcing.dev\
+    ');
       if (domain.match("crowdsourcing") || domain.match("cs.mindia.jp")) {
         dbtype = "cs";
         token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c');
@@ -903,7 +904,7 @@
       }
       s = new Date(work_log.started_at * 1000);
       $(".md_" + (s.getMonth() + 1) + "_" + (s.getDate())).append("<div>" + issue.title + "</div>");
-      $("#work_logs").append("<tr class=\"work_log_" + work_log.id + "\">\n<td>\n" + issue.title + "\n</td>\n<td>\n" + (dispDate(work_log)) + "\n</td>\n<td>\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n</td>\n<td>\n" + (work_log.server_id ? "" : uicon) + "\n<div class=\"work_log_" + work_log.id + " issue_" + issue.id + "\" style=\"padding:10px;\">\n<a href=\"#\" class=\"card btn " + btn_type + "\" data-issue-id=\"" + issue.id + "\">" + disp + "</a>\n</div>\n</td>\n</tr>");
+      $("#work_logs").append("<tr class=\"work_log_" + work_log.id + "\">\n<td class=\"word_break\">\n" + (wbr(issue.title, 9)) + "\n</td>\n<td>\n" + (dispDate(work_log)) + "\n</td>\n<td>\n<span class=\"time\">" + (dispTime(work_log)) + "</span>\n</td>\n<td>\n" + (work_log.server_id ? "" : uicon) + "\n<div class=\"work_log_" + work_log.id + " issue_" + issue.id + "\" style=\"padding:10px;\">\n<a href=\"#\" class=\"card btn " + btn_type + "\" data-issue-id=\"" + issue.id + "\">" + disp + "</a>\n</div>\n</td>\n</tr>");
       $(".work_log_" + work_log.id + " .card").click(function() {
         var work_log_id;
 
@@ -922,6 +923,12 @@
       }
     }
     return _results;
+  };
+
+  wbr = function(str, num) {
+    return str.replace(RegExp("(\\w{" + num + "})(\\w)", "g"), function(all, text, char) {
+      return text + "<wbr>" + char;
+    });
   };
 
   renderCalendars = function() {

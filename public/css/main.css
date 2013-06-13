@@ -2,6 +2,10 @@ body{
   padding-top: 70px;
 }
 
+.word_break{
+  word-wrap: break-word!important;
+}
+
 .project, .issue .body{
   display: none;
 }
