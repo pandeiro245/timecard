@@ -1,4 +1,139 @@
 (function() {
+  var Project, Projects, _ref, _ref1,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Project = (function(_super) {
+    __extends(Project, _super);
+
+    function Project() {
+      _ref = Project.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    return Project;
+
+  })(Backbone.Model);
+
+  Projects = (function(_super) {
+    __extends(Projects, _super);
+
+    function Projects() {
+      _ref1 = Projects.__super__.constructor.apply(this, arguments);
+      return _ref1;
+    }
+
+    Projects.prototype.model = Project;
+
+    return Projects;
+
+  })(Backbone.Collection);
+
+  this.Project = Project;
+
+  this.Projects = Projects;
+
+}).call(this);
+
+(function() {
+  var ProjectView, ProjectsView, _ref, _ref1,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  ProjectView = (function(_super) {
+    __extends(ProjectView, _super);
+
+    function ProjectView() {
+      _ref = ProjectView.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    ProjectView.prototype.tagName = 'div';
+
+    ProjectView.prototype.className = 'project';
+
+    ProjectView.prototype.events = {
+      "click div .edit a": "clickEdit",
+      "click div .ddt a": "clickDdt",
+      "keypress div .input-append .input": "pressAddIssue"
+    };
+
+    ProjectView.prototype.pressAddIssue = function(e) {
+      var project_id, title;
+
+      if (e.which === 13) {
+        console.log;
+        title = $(e.target).val();
+        project_id = this.model.id;
+        if (title.length > 0) {
+          addIssue(project_id, title);
+          return $(e.target).val("");
+        } else {
+          return alert("please input the title");
+        }
+      }
+    };
+
+    ProjectView.prototype.clickEdit = function() {
+      return doEditProject(this.model.id);
+    };
+
+    ProjectView.prototype.clickDdt = function() {
+      return doDdtProject(this.model.id);
+    };
+
+    ProjectView.prototype.template = _.template($('#project-template').html());
+
+    ProjectView.prototype.render = function() {
+      var template;
+
+      template = this.template(this.model.toJSON());
+      this.$el.html(template);
+      return this;
+    };
+
+    return ProjectView;
+
+  })(Backbone.View);
+
+  ProjectsView = (function(_super) {
+    __extends(ProjectsView, _super);
+
+    function ProjectsView() {
+      _ref1 = ProjectsView.__super__.constructor.apply(this, arguments);
+      return _ref1;
+    }
+
+    ProjectsView.prototype.tagName = 'div';
+
+    ProjectsView.prototype.id = "issues";
+
+    ProjectsView.prototype.className = "row-fluid";
+
+    ProjectsView.prototype.render = function() {
+      this.collection.each(function(project) {
+        var projectView;
+
+        projectView = new ProjectView({
+          model: project,
+          id: "project_" + project.id
+        });
+        return this.$el.append(projectView.render().el);
+      }, this);
+      return this;
+    };
+
+    return ProjectsView;
+
+  })(Backbone.View);
+
+  this.ProjectView = ProjectView;
+
+  this.ProjectsView = ProjectsView;
+
+}).call(this);
+
+(function() {
   var socket;
 
   if (typeof io !== "undefined" && io !== null) {
@@ -84,54 +219,7 @@
 }).call(this);
 
 (function() {
-  var Project, ProjectView, Projects, ProjectsView, addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
-
-  Project = Backbone.Model.extend();
-
-  Projects = Backbone.Collection.extend({
-    model: Project
-  });
-
-  ProjectView = Backbone.View.extend({
-    tagName: 'div',
-    className: 'project',
-    events: {
-      "click div .edit a": "clickEdit",
-      "click div .ddt a": "clickDdt"
-    },
-    clickEdit: function() {
-      return doEditProject(this.model.id);
-    },
-    clickDdt: function() {
-      return doDdtProject(this.model.id);
-    },
-    template: _.template($('#project-template').html()),
-    render: function() {
-      var template;
-
-      template = this.template(this.model.toJSON());
-      this.$el.html(template);
-      return this;
-    }
-  });
-
-  ProjectsView = Backbone.View.extend({
-    tagName: 'div',
-    id: "issues",
-    className: "row-fluid",
-    render: function() {
-      this.collection.each(function(project) {
-        var projectView;
-
-        projectView = new ProjectView({
-          model: project,
-          id: "project_" + project.id
-        });
-        return this.$el.append(projectView.render().el);
-      }, this);
-      return this;
-    }
-  });
+  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
 
   init = function() {
     /*
@@ -523,19 +611,6 @@
       project_name = "<a href=\"" + (project.get('url')) + "\" target=\"_blank\">" + project_name + "</a>";
     }
     $("#project_" + project.id).hide();
-    hl.enter("#project_" + project.id + " div div .input", function(e, target) {
-      var $project, project_id, title;
-
-      title = $(target).val();
-      $project = $(target).parent().parent().parent();
-      project_id = $project.attr("id").replace("project_", "");
-      if (title.length > 0) {
-        addIssue(project_id, title);
-        return $(target).val("");
-      } else {
-        return alert("please input the title");
-      }
-    });
     return $("#project_" + project.id + " div h1").droppable({
       over: function(event, ui) {
         return $(this).css("background", "#fc0");

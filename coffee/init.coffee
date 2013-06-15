@@ -1,39 +1,3 @@
-Project = Backbone.Model.extend()
-Projects = Backbone.Collection.extend({
-  model: Project
-})
-ProjectView = Backbone.View.extend({
-  tagName: 'div',
-  className: 'project',
-  events: {
-    "click div .edit a": "clickEdit"
-    "click div .ddt a" : "clickDdt"
-  }
-  clickEdit: () ->
-    doEditProject(this.model.id)
-  clickDdt: () ->
-    doDdtProject(this.model.id)
-  template: _.template($('#project-template').html()),
-  render : () ->
-    template = this.template(this.model.toJSON())
-    this.$el.html(template)
-    return this
-})
-ProjectsView = Backbone.View.extend({
-  tagName: 'div',
-  id: "issues",
-  className: "row-fluid",
-  render: () ->
-    this.collection.each((project) ->
-      projectView = new ProjectView({
-        model: project
-        id   : "project_#{project.id}"
-      })
-      this.$el.append(projectView.render().el)
-    , this)
-    return this
-})
-
 init = () ->
   ###
   $(window).focus((e) ->
@@ -306,16 +270,6 @@ renderProject = (project) ->
 
   #$("#issues").append(projectView.render().el)
   $("#project_#{project.id}").hide()
-  hl.enter("#project_#{project.id} div div .input", (e, target)->
-    title = $(target).val()
-    $project = $(target).parent().parent().parent()
-    project_id = $project.attr("id").replace("project_","")
-    if title.length > 0
-      addIssue(project_id, title)
-      $(target).val("")
-    else
-      alert "please input the title"
-  )
   $("#project_#{project.id} div h1").droppable({
     over: (event, ui) ->
       $(this).css("background", "#fc0")

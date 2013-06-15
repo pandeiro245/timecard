@@ -4,13 +4,13 @@ module.exports = function(grunt){
     coffee: {
         compile: {
             files: {
-                'public/js/coffee.js': ['coffee/*.coffee'],
+                'public/js/coffee.js': ['coffee/models/*.coffee', 'coffee/views/*.coffee', 'coffee/*.coffee', ],
                 'app.js': ['app.coffee'],
             }
         },
     },
     watch: {
-        files: ['coffee/*.coffee', "app.coffee"],
+        files: ['coffee/*.coffee', "app.coffee", 'coffee/models/*.coffee', 'coffee/views/*.coffee'],
         tasks: 'coffee'
     }
   });
