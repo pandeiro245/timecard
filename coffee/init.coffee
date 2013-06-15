@@ -1,4 +1,7 @@
 Project = Backbone.Model.extend()
+Projects = Backbone.Collection.extend({
+  model: Project
+})
 ProjectView = Backbone.View.extend({
   tagName: 'div',
   className: 'project',
@@ -14,6 +17,20 @@ ProjectView = Backbone.View.extend({
   render : () ->
     template = this.template(this.model.toJSON())
     this.$el.html(template)
+    return this
+})
+ProjectsView = Backbone.View.extend({
+  tagName: 'div',
+  id: "issues",
+  className: "row-fluid",
+  render: () ->
+    this.collection.each((project) ->
+      projectView = new ProjectView({
+        model: project
+        id   : "project_#{project.id}"
+      })
+      this.$el.append(projectView.render().el)
+    , this)
     return this
 })
 
@@ -146,12 +163,11 @@ sync_item = (server, table_name, i) ->
     item = db.ins(table_name, i)
 
 renderProjects = () ->
-  projects = []
-  for project in db.find("projects", null, {order: {upd_at: "desc"}})
-    projects.push(new Project(project))
-  $("#issues").html("")
-  for project in projects
-    renderProject(project)
+  projects = new Projects(
+    db.find("projects", null, {order: {upd_at: "desc"}})
+  )
+  projectsView = new ProjectsView({collection: projects})
+  $("#wrapper").html(projectsView.render().el)
   $("#issues").append(innerLink())
 
 prepareNodeServer = () ->
@@ -279,7 +295,6 @@ doImport = (json) ->
       db.ins(table_name, item)
   return true
 
-
 renderProject = (project) ->
   projectView = new ProjectView({
     model: project,
@@ -289,31 +304,7 @@ renderProject = (project) ->
   project_name = project.get("name")
   project_name = "<a href=\"#{project.get('url')}\" target=\"_blank\">#{project_name}</a>" if project.url
 
-  $("#issues").append(projectView.render().el)
-    
-  ###
-  $("#issues").append("""
-    <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
-    #{innerLink()}
-    <div class=\"span12\">
-    <h1>
-      #{project_name}#{if project.server_id then "" else uicon}
-    </h1>
-    <div class=\"issues\"></div>
-    <div class=\"input-append\"> 
-      <input type=\"text\" class=\"input\" />
-      <input type=\"submit\" value=\"add issue\" class=\"btn\" />
-    </div>
-    <div class=\"ddt\"> 
-      <a href="#" class=\"btn\">DDT</a>
-    </div>
-    <div class=\"edit\"> 
-      <a href="#" class=\"btn\">Edit</a>
-    </div>
-    </div>
-    </div>
-  """)
-  ###
+  #$("#issues").append(projectView.render().el)
   $("#project_#{project.id}").hide()
   hl.enter("#project_#{project.id} div div .input", (e, target)->
     title = $(target).val()
@@ -325,16 +316,6 @@ renderProject = (project) ->
     else
       alert "please input the title"
   )
-  ###
-  hl.click("#project_#{project.id} div .edit a", (e, target)->
-    doEditProject(project.id)
-  )
-
-  hl.click("#project_#{project.id} div .ddt a", (e, target)->
-    doDdtProject(project.id)
-  )
-  ###
-
   $("#project_#{project.id} div h1").droppable({
     over: (event, ui) ->
       $(this).css("background", "#fc0")

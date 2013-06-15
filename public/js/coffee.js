@@ -84,9 +84,13 @@
 }).call(this);
 
 (function() {
-  var Project, ProjectView, addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
+  var Project, ProjectView, Projects, ProjectsView, addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
 
   Project = Backbone.Model.extend();
+
+  Projects = Backbone.Collection.extend({
+    model: Project
+  });
 
   ProjectView = Backbone.View.extend({
     tagName: 'div',
@@ -107,6 +111,24 @@
 
       template = this.template(this.model.toJSON());
       this.$el.html(template);
+      return this;
+    }
+  });
+
+  ProjectsView = Backbone.View.extend({
+    tagName: 'div',
+    id: "issues",
+    className: "row-fluid",
+    render: function() {
+      this.collection.each(function(project) {
+        var projectView;
+
+        projectView = new ProjectView({
+          model: project,
+          id: "project_" + project.id
+        });
+        return this.$el.append(projectView.render().el);
+      }, this);
       return this;
     }
   });
@@ -311,23 +333,17 @@
   };
 
   renderProjects = function() {
-    var project, projects, _i, _j, _len, _len1, _ref;
+    var projects, projectsView;
 
-    projects = [];
-    _ref = db.find("projects", null, {
+    projects = new Projects(db.find("projects", null, {
       order: {
         upd_at: "desc"
       }
+    }));
+    projectsView = new ProjectsView({
+      collection: projects
     });
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      project = _ref[_i];
-      projects.push(new Project(project));
-    }
-    $("#issues").html("");
-    for (_j = 0, _len1 = projects.length; _j < _len1; _j++) {
-      project = projects[_j];
-      renderProject(project);
-    }
+    $("#wrapper").html(projectsView.render().el);
     return $("#issues").append(innerLink());
   };
 
@@ -506,31 +522,6 @@
     if (project.url) {
       project_name = "<a href=\"" + (project.get('url')) + "\" target=\"_blank\">" + project_name + "</a>";
     }
-    $("#issues").append(projectView.render().el);
-    /*
-    $("#issues").append("""
-      <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
-      #{innerLink()}
-      <div class=\"span12\">
-      <h1>
-        #{project_name}#{if project.server_id then "" else uicon}
-      </h1>
-      <div class=\"issues\"></div>
-      <div class=\"input-append\"> 
-        <input type=\"text\" class=\"input\" />
-        <input type=\"submit\" value=\"add issue\" class=\"btn\" />
-      </div>
-      <div class=\"ddt\"> 
-        <a href="#" class=\"btn\">DDT</a>
-      </div>
-      <div class=\"edit\"> 
-        <a href="#" class=\"btn\">Edit</a>
-      </div>
-      </div>
-      </div>
-    """)
-    */
-
     $("#project_" + project.id).hide();
     hl.enter("#project_" + project.id + " div div .input", function(e, target) {
       var $project, project_id, title;
@@ -545,16 +536,6 @@
         return alert("please input the title");
       }
     });
-    /*
-    hl.click("#project_#{project.id} div .edit a", (e, target)->
-      doEditProject(project.id)
-    )
-    
-    hl.click("#project_#{project.id} div .ddt a", (e, target)->
-      doDdtProject(project.id)
-    )
-    */
-
     return $("#project_" + project.id + " div h1").droppable({
       over: function(event, ui) {
         return $(this).css("background", "#fc0");
