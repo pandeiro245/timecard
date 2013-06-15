@@ -11,9 +11,19 @@
 <link href="./css/main.css"rel="stylesheet" type="text/css" />
 <script type="text/template" id="project-template">
 <div class="span12">
-<h1>
-<%- name %>
-</h1>
+<h1><%- name %></h1>
+<div class="issues"></div>
+<div class="input-append"> 
+  <input type="text" class="input" />
+  <input type="submit" value="add issue" class="btn" />
+</div>
+<div class="ddt"> 
+  <a href="#" class="btn">DDT</a>
+</div>
+<div class="edit"> 
+  <a href="#" class="btn">Edit</a>
+</div>
+
 </div>
 </script>
 <script src="./js/jquery.js"></script>

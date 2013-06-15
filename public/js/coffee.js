@@ -91,6 +91,16 @@
   ProjectView = Backbone.View.extend({
     tagName: 'div',
     className: 'project',
+    events: {
+      "click div .edit a": "clickEdit",
+      "click div .ddt a": "clickDdt"
+    },
+    clickEdit: function() {
+      return doEditProject(this.model.id);
+    },
+    clickDdt: function() {
+      return doDdtProject(this.model.id);
+    },
     template: _.template($('#project-template').html()),
     render: function() {
       var template;
@@ -509,12 +519,35 @@
       model: project,
       id: "project_" + project.id
     });
-    console.log(projectView.render().el);
     project_name = project.get("name");
     if (project.url) {
       project_name = "<a href=\"" + (project.get('url')) + "\" target=\"_blank\">" + project_name + "</a>";
     }
-    $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n" + (innerLink()) + "\n<div class=\"span12\">\n<h1>\n  " + project_name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n<div class=\"ddt\"> \n  <a href=\"#\" class=\"btn\">DDT</a>\n</div>\n<div class=\"edit\"> \n  <a href=\"#\" class=\"btn\">Edit</a>\n</div>\n</div>\n</div>");
+    $("#issues").append(projectView.render().el);
+    /*
+    $("#issues").append("""
+      <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
+      #{innerLink()}
+      <div class=\"span12\">
+      <h1>
+        #{project_name}#{if project.server_id then "" else uicon}
+      </h1>
+      <div class=\"issues\"></div>
+      <div class=\"input-append\"> 
+        <input type=\"text\" class=\"input\" />
+        <input type=\"submit\" value=\"add issue\" class=\"btn\" />
+      </div>
+      <div class=\"ddt\"> 
+        <a href="#" class=\"btn\">DDT</a>
+      </div>
+      <div class=\"edit\"> 
+        <a href="#" class=\"btn\">Edit</a>
+      </div>
+      </div>
+      </div>
+    """)
+    */
+
     $("#project_" + project.id).hide();
     hl.enter("#project_" + project.id + " div div .input", function(e, target) {
       var $project, project_id, title;
@@ -529,12 +562,16 @@
         return alert("please input the title");
       }
     });
-    hl.click("#project_" + project.id + " div .edit a", function(e, target) {
-      return doEditProject(project.id);
-    });
-    hl.click("#project_" + project.id + " div .ddt a", function(e, target) {
-      return doDdtProject(project.id);
-    });
+    /*
+    hl.click("#project_#{project.id} div .edit a", (e, target)->
+      doEditProject(project.id)
+    )
+    
+    hl.click("#project_#{project.id} div .ddt a", (e, target)->
+      doDdtProject(project.id)
+    )
+    */
+
     return $("#project_" + project.id + " div h1").droppable({
       over: function(event, ui) {
         return $(this).css("background", "#fc0");
@@ -860,7 +897,6 @@
     }
     if (working_log()) {
       $issue_cards = $(".issue_" + issue_id + " .card");
-      console.log($issue_cards);
       $issue_cards.html("Stop");
       $issue_cards.removeClass("btn-primary");
       $issue_cards.addClass("btn-warning");

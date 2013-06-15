@@ -2,6 +2,14 @@ Project = Backbone.Model.extend()
 ProjectView = Backbone.View.extend({
   tagName: 'div',
   className: 'project',
+  events: {
+    "click div .edit a": "clickEdit",
+    "click div .ddt a": "clickDdt",
+  }
+  clickEdit: () ->
+    doEditProject(this.model.id)
+  clickDdt: () ->
+    doDdtProject(this.model.id)
   template: _.template($('#project-template').html()),
   render : () ->
     template = this.template(this.model.toJSON())
@@ -288,11 +296,13 @@ renderProject = (project) ->
     model: project,
     id   : "project_#{project.id}"
   })
-  console.log projectView.render().el
 
   project_name = project.get("name")
   project_name = "<a href=\"#{project.get('url')}\" target=\"_blank\">#{project_name}</a>" if project.url
 
+  $("#issues").append(projectView.render().el)
+    
+  ###
   $("#issues").append("""
     <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
     #{innerLink()}
@@ -314,6 +324,7 @@ renderProject = (project) ->
     </div>
     </div>
   """)
+  ###
   $("#project_#{project.id}").hide()
   hl.enter("#project_#{project.id} div div .input", (e, target)->
     title = $(target).val()
@@ -325,7 +336,7 @@ renderProject = (project) ->
     else
       alert "please input the title"
   )
-
+  ###
   hl.click("#project_#{project.id} div .edit a", (e, target)->
     doEditProject(project.id)
   )
@@ -333,6 +344,7 @@ renderProject = (project) ->
   hl.click("#project_#{project.id} div .ddt a", (e, target)->
     doDdtProject(project.id)
   )
+  ###
 
   $("#project_#{project.id} div h1").droppable({
     over: (event, ui) ->
@@ -529,7 +541,6 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
   issue_id = working_log().issue_id if working_log()
   if working_log()
     $issue_cards = $(".issue_#{issue_id} .card")
-    console.log $issue_cards
     $issue_cards.html("Stop")
     $issue_cards.removeClass("btn-primary")
     $issue_cards.addClass("btn-warning")
