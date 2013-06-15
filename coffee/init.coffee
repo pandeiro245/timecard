@@ -1,12 +1,6 @@
 init = () ->
-  ###
-  $(window).focus((e) ->
-    stopWorkLog()
-  )
-  ###
   cdown()
   #prepareNodeServer()
-  prepareAddProject()
   prepareShowProjects()
   prepareAddServer()
   prepareDoExport()
@@ -131,6 +125,7 @@ renderProjects = () ->
     db.find("projects", null, {order: {upd_at: "desc"}})
   )
   projectsView = new ProjectsView({collection: projects})
+  addProjectView = new AddProjectView({collection: projects})
   $("#wrapper").html(projectsView.render().el)
   $("#issues").append(innerLink())
 
@@ -188,17 +183,6 @@ prepareAddServer = () ->
       )
     else
       alert "invalid domain"
-  )
-
-prepareAddProject = () ->
-  hl.click(".add_project", (e, target)->
-    title = prompt('please input the project name', '')
-    issue_title = prompt('please input the issue title', 'add issues')
-    if title.length > 0 && issue_title.length > 0
-      project = addProject(title)
-      addIssue(project.id, issue_title)
-    else
-      alert "please input the title of project and issue."
   )
 
 prepareDoExport = () ->
@@ -268,7 +252,6 @@ renderProject = (project) ->
   project_name = project.get("name")
   project_name = "<a href=\"#{project.get('url')}\" target=\"_blank\">#{project_name}</a>" if project.url
 
-  #$("#issues").append(projectView.render().el)
   $("#project_#{project.id}").hide()
   $("#project_#{project.id} div h1").droppable({
     over: (event, ui) ->
@@ -470,7 +453,7 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
     $issue_cards.addClass("btn-warning")
   renderWorkLogs()
 
-addIssue = (project_id, title) ->
+@addIssue = (project_id, title) ->
   issue = db.ins("issues", {title: title, project_id: project_id, body:""})
   renderIssue(issue, "prepend")
 

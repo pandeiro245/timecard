@@ -1,6 +1,8 @@
 class ProjectView extends Backbone.View
   tagName: 'div',
   className: 'project',
+  initialize: () ->
+    this.model.on('change', this.render, this)
   events: {
     "click div .edit a": "clickEdit"
     "click div .ddt a" : "clickDdt"
@@ -27,9 +29,14 @@ class ProjectView extends Backbone.View
     return this
 
 class ProjectsView extends Backbone.View
-  tagName: 'div',
-  id: "issues",
-  className: "row-fluid",
+  id: "issues"
+  tagName: 'div'
+  initialize: () ->
+    this.collection.on('add', this.addNew, this)
+  addNew: (project) ->
+    projectView = new ProjectView({model: project})
+    this.$el.append(projectView.render().el)
+  className: "row-fluid"
   render: () ->
     this.collection.each((project) ->
       projectView = new ProjectView({
@@ -40,5 +47,21 @@ class ProjectsView extends Backbone.View
     , this)
     return this
 
+class AddProjectView extends Backbone.View
+  el: ".add_project"
+  events: {
+    "click": "clicked"
+  },
+  clicked: (e) ->
+    e.preventDefault()
+    project = new Project()
+    name = prompt('please input the project name', '')
+    issue_title = prompt('please input the issue title', 'add issues')
+    if project.set({name: name}, {validate: true})
+      p = db.ins("projects", {name: name})
+      db.ins("issues", {title: issue_title, project_id: p.id})
+      this.collection.add(project)
+
 @ProjectView = ProjectView
 @ProjectsView = ProjectsView
+@AddProjectView = AddProjectView

@@ -11,6 +11,18 @@
       return _ref;
     }
 
+    Project.prototype.validate = function(attrs) {
+      if (_.isEmpty(attrs.name)) {
+        return "project name must not be empty";
+      }
+    };
+
+    Project.prototype.initialize = function() {
+      return this.on('invalid', function(model, error) {
+        return alert(error);
+      });
+    };
+
     return Project;
 
   })(Backbone.Model);
@@ -36,7 +48,7 @@
 }).call(this);
 
 (function() {
-  var ProjectView, ProjectsView, _ref, _ref1,
+  var AddProjectView, ProjectView, ProjectsView, _ref, _ref1, _ref2,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -51,6 +63,10 @@
     ProjectView.prototype.tagName = 'div';
 
     ProjectView.prototype.className = 'project';
+
+    ProjectView.prototype.initialize = function() {
+      return this.model.on('change', this.render, this);
+    };
 
     ProjectView.prototype.events = {
       "click div .edit a": "clickEdit",
@@ -104,9 +120,22 @@
       return _ref1;
     }
 
+    ProjectsView.prototype.id = "issues";
+
     ProjectsView.prototype.tagName = 'div';
 
-    ProjectsView.prototype.id = "issues";
+    ProjectsView.prototype.initialize = function() {
+      return this.collection.on('add', this.addNew, this);
+    };
+
+    ProjectsView.prototype.addNew = function(project) {
+      var projectView;
+
+      projectView = new ProjectView({
+        model: project
+      });
+      return this.$el.append(projectView.render().el);
+    };
 
     ProjectsView.prototype.className = "row-fluid";
 
@@ -127,9 +156,52 @@
 
   })(Backbone.View);
 
+  AddProjectView = (function(_super) {
+    __extends(AddProjectView, _super);
+
+    function AddProjectView() {
+      _ref2 = AddProjectView.__super__.constructor.apply(this, arguments);
+      return _ref2;
+    }
+
+    AddProjectView.prototype.el = ".add_project";
+
+    AddProjectView.prototype.events = {
+      "click": "clicked"
+    };
+
+    AddProjectView.prototype.clicked = function(e) {
+      var issue_title, name, p, project;
+
+      e.preventDefault();
+      project = new Project();
+      name = prompt('please input the project name', '');
+      issue_title = prompt('please input the issue title', 'add issues');
+      if (project.set({
+        name: name
+      }, {
+        validate: true
+      })) {
+        p = db.ins("projects", {
+          name: name
+        });
+        db.ins("issues", {
+          title: issue_title,
+          project_id: p.id
+        });
+        return this.collection.add(project);
+      }
+    };
+
+    return AddProjectView;
+
+  })(Backbone.View);
+
   this.ProjectView = ProjectView;
 
   this.ProjectsView = ProjectsView;
+
+  this.AddProjectView = AddProjectView;
 
 }).call(this);
 
@@ -219,16 +291,10 @@
 }).call(this);
 
 (function() {
-  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
+  var addFigure, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
 
   init = function() {
-    /*
-    $(window).focus((e) ->
-      stopWorkLog()
-    )
-    */
     cdown();
-    prepareAddProject();
     prepareShowProjects();
     prepareAddServer();
     prepareDoExport();
@@ -421,7 +487,7 @@
   };
 
   renderProjects = function() {
-    var projects, projectsView;
+    var addProjectView, projects, projectsView;
 
     projects = new Projects(db.find("projects", null, {
       order: {
@@ -429,6 +495,9 @@
       }
     }));
     projectsView = new ProjectsView({
+      collection: projects
+    });
+    addProjectView = new AddProjectView({
       collection: projects
     });
     $("#wrapper").html(projectsView.render().el);
@@ -500,21 +569,6 @@
         });
       } else {
         return alert("invalid domain");
-      }
-    });
-  };
-
-  prepareAddProject = function() {
-    return hl.click(".add_project", function(e, target) {
-      var issue_title, project, title;
-
-      title = prompt('please input the project name', '');
-      issue_title = prompt('please input the issue title', 'add issues');
-      if (title.length > 0 && issue_title.length > 0) {
-        project = addProject(title);
-        return addIssue(project.id, issue_title);
-      } else {
-        return alert("please input the title of project and issue.");
       }
     });
   };
@@ -943,7 +997,7 @@
     return renderWorkLogs();
   };
 
-  addIssue = function(project_id, title) {
+  this.addIssue = function(project_id, title) {
     var issue;
 
     issue = db.ins("issues", {
