@@ -84,7 +84,7 @@
 }).call(this);
 
 (function() {
-  var Project, ProjectView, addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
+  var Project, ProjectView, addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
 
   Project = Backbone.Model.extend();
 
@@ -112,16 +112,17 @@
   });
 
   init = function() {
-    $(window).focus(function(e) {
-      return stopWorkLog();
-    });
+    /*
+    $(window).focus((e) ->
+      stopWorkLog()
+    )
+    */
     cdown();
     prepareAddProject();
     prepareShowProjects();
     prepareAddServer();
     prepareDoExport();
     prepareDoImport();
-    prepareDoCheckedDdt();
     renderProjects();
     renderIssues();
     renderWorkLogs();
@@ -492,24 +493,6 @@
       }
     }
     return true;
-  };
-
-  prepareDoCheckedDdt = function() {
-    return $(".do_checked_ddt").click(function() {
-      var $checked, i, _i, _len, _results;
-
-      $checked = $("input:checkbox:checked");
-      if ($checked.length === 0) {
-        return alert("please select issues");
-      } else {
-        _results = [];
-        for (_i = 0, _len = $checked.length; _i < _len; _i++) {
-          i = $checked[_i];
-          _results.push($(i).parent().parent().parent().find(".btn-toolbar").find(".btn-group").find(".ddt").click());
-        }
-        return _results;
-      }
-    });
   };
 
   renderProject = function(project) {

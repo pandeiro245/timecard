@@ -3,8 +3,8 @@ ProjectView = Backbone.View.extend({
   tagName: 'div',
   className: 'project',
   events: {
-    "click div .edit a": "clickEdit",
-    "click div .ddt a": "clickDdt",
+    "click div .edit a": "clickEdit"
+    "click div .ddt a" : "clickDdt"
   }
   clickEdit: () ->
     doEditProject(this.model.id)
@@ -18,9 +18,11 @@ ProjectView = Backbone.View.extend({
 })
 
 init = () ->
+  ###
   $(window).focus((e) ->
     stopWorkLog()
   )
+  ###
   cdown()
   #prepareNodeServer()
   prepareAddProject()
@@ -28,7 +30,6 @@ init = () ->
   prepareAddServer()
   prepareDoExport()
   prepareDoImport()
-  prepareDoCheckedDdt()
   renderProjects()
   renderIssues()
   renderWorkLogs()
@@ -277,18 +278,6 @@ doImport = (json) ->
     for item in data
       db.ins(table_name, item)
   return true
-
-
-prepareDoCheckedDdt = () ->
-  $(".do_checked_ddt").click(() ->
-    $checked = $("input:checkbox:checked")
-    if $checked.length == 0
-      alert "please select issues"
-    else
-      for i in $checked
-        $(i).parent().parent().parent().find(".btn-toolbar").find(".btn-group").find(".ddt").click()
-  )
-
 
 
 renderProject = (project) ->
