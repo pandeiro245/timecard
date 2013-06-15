@@ -1,3 +1,14 @@
+Project = Backbone.Model.extend()
+ProjectView = Backbone.View.extend({
+  tagName: 'div',
+  className: 'project',
+  template: _.template($('#project-template').html()),
+  render : () ->
+    template = this.template(this.model.toJSON())
+    this.$el.html(template)
+    return this
+})
+
 init = () ->
   $(window).focus((e) ->
     stopWorkLog()
@@ -126,9 +137,9 @@ sync_item = (server, table_name, i) ->
     item = db.ins(table_name, i)
 
 renderProjects = () ->
-  projects = db.find(
-    "projects", null, {order: {upd_at: "desc"}}
-  )
+  projects = []
+  for project in db.find("projects", null, {order: {upd_at: "desc"}})
+    projects.push(new Project(project))
   $("#issues").html("")
   for project in projects
     renderProject(project)
@@ -273,8 +284,15 @@ prepareDoCheckedDdt = () ->
 
 
 renderProject = (project) ->
-  project_name = project.name
-  project_name = "<a href=\"#{project.url}\" target=\"_blank\">#{project.name}</a>" if project.url
+  projectView = new ProjectView({
+    model: project,
+    id   : "project_#{project.id}"
+  })
+  console.log projectView.render().el
+
+  project_name = project.get("name")
+  project_name = "<a href=\"#{project.get('url')}\" target=\"_blank\">#{project_name}</a>" if project.url
+
   $("#issues").append("""
     <div id=\"project_#{project.id}\"class=\"project\" style=\"display:none;\">
     #{innerLink()}
@@ -574,7 +592,6 @@ renderWorkLogs = (server=null) ->
     if false
       if !work_log.end_at
         wl = work_log
-
 
 wbr = (str, num) ->
   return str.replace(RegExp("(\\w{" + num + "})(\\w)", "g"), (all,text,char) ->

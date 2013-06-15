@@ -84,7 +84,22 @@
 }).call(this);
 
 (function() {
-  var addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
+  var Project, ProjectView, addFigure, addIssue, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddProject, prepareAddServer, prepareCards, prepareDD, prepareDoCheckedDdt, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
+
+  Project = Backbone.Model.extend();
+
+  ProjectView = Backbone.View.extend({
+    tagName: 'div',
+    className: 'project',
+    template: _.template($('#project-template').html()),
+    render: function() {
+      var template;
+
+      template = this.template(this.model.toJSON());
+      this.$el.html(template);
+      return this;
+    }
+  });
 
   init = function() {
     $(window).focus(function(e) {
@@ -285,16 +300,21 @@
   };
 
   renderProjects = function() {
-    var project, projects, _i, _len;
+    var project, projects, _i, _j, _len, _len1, _ref;
 
-    projects = db.find("projects", null, {
+    projects = [];
+    _ref = db.find("projects", null, {
       order: {
         upd_at: "desc"
       }
     });
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      project = _ref[_i];
+      projects.push(new Project(project));
+    }
     $("#issues").html("");
-    for (_i = 0, _len = projects.length; _i < _len; _i++) {
-      project = projects[_i];
+    for (_j = 0, _len1 = projects.length; _j < _len1; _j++) {
+      project = projects[_j];
       renderProject(project);
     }
     return $("#issues").append(innerLink());
@@ -483,11 +503,16 @@
   };
 
   renderProject = function(project) {
-    var project_name;
+    var projectView, project_name;
 
-    project_name = project.name;
+    projectView = new ProjectView({
+      model: project,
+      id: "project_" + project.id
+    });
+    console.log(projectView.render().el);
+    project_name = project.get("name");
     if (project.url) {
-      project_name = "<a href=\"" + project.url + "\" target=\"_blank\">" + project.name + "</a>";
+      project_name = "<a href=\"" + (project.get('url')) + "\" target=\"_blank\">" + project_name + "</a>";
     }
     $("#issues").append("<div id=\"project_" + project.id + "\"class=\"project\" style=\"display:none;\">\n" + (innerLink()) + "\n<div class=\"span12\">\n<h1>\n  " + project_name + (project.server_id ? "" : uicon) + "\n</h1>\n<div class=\"issues\"></div>\n<div class=\"input-append\"> \n  <input type=\"text\" class=\"input\" />\n  <input type=\"submit\" value=\"add issue\" class=\"btn\" />\n</div>\n<div class=\"ddt\"> \n  <a href=\"#\" class=\"btn\">DDT</a>\n</div>\n<div class=\"edit\"> \n  <a href=\"#\" class=\"btn\">Edit</a>\n</div>\n</div>\n</div>");
     $("#project_" + project.id).hide();
