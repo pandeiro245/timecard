@@ -18,7 +18,6 @@ renderProjects = () ->
   projectsView = new ProjectsView({collection: projects})
   addProjectView = new AddProjectView({collection: projects})
   $("#wrapper").html(projectsView.render().el)
-  #$("#issues").append(innerLink())
 
 prepareShowProjects = () ->
   $(".show_projects").click(() ->
@@ -214,6 +213,7 @@ doDdt = (issue_id) ->
   issue = new Issue().find(issue_id)
   unless issue.is_ddt()
     issue.set_ddt()
+    stopWorkLog()
     $("#issue_#{issue.id}").fadeOut(200)
   else
     issue.cancel_ddt

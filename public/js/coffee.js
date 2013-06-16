@@ -986,6 +986,7 @@ class Servers extends Backbone.collection
     issue = new Issue().find(issue_id);
     if (!issue.is_ddt()) {
       issue.set_ddt();
+      stopWorkLog();
       return $("#issue_" + issue.id).fadeOut(200);
     } else {
       issue.cancel_ddt;
