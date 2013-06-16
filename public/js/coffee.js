@@ -200,6 +200,208 @@
 
 }).call(this);
 
+/*
+class Server extends JSRelModel
+  #for JSRelmodel start
+  table_name: "servers"
+  thisclass:  (params) ->
+    return new Server(params)
+  collection: (params) ->
+    return new Servers(params)
+  #for JSRelmodel end
+
+  fetch: () ->
+    server = this.toJSON()
+    domain = server.domain
+    token = server.token
+    projects = []
+    issues = []
+    work_logs = []
+    for project in findWillUploads("projects")
+      projects = pushIfHasIssue(project, projects)
+    for issue in findWillUploads("issues")
+      issues.push(forUploadIssue(issue))
+    for work_log in findWillUploads("work_logs")
+      work_logs.push(forUploadWorkLog(work_log))
+    diffs =  {
+      projects: projects,
+      issues: issues,
+      work_logs: work_logs
+    }
+    working_logs = []
+    wlsis = db.one("infos", {key: "working_log_server_ids"})
+    if wlsis and wlsis.val
+      for working_log_server_id in wlsis.val.split(",")
+        server_id = parseInt(working_log_server_id)
+        working_logs.push(db.one(
+          "work_logs", {server_id: server_id})
+        )
+    params = {
+      token: token,
+      last_fetch: last_fetch(),
+      diffs: diffs,
+      working_logs: working_logs
+    }
+    url = "#{domain}/api/v1/diffs.json"
+
+    $.ajax({
+      type : "POST",
+      url  : url,
+      data : params,
+      complete: (res) ->
+        data = res.responseText
+        data = JSON.parse(data)
+        updtWorkLogServerIds(data)
+        sync(server, "server_ids", data.server_ids)
+        sync(server, "projects", data.projects)
+        sync(server, "issues", data.issues)
+        sync(server, "work_logs", data.work_logs)
+        renderWorkLogs(server)
+        last_fetch(now())
+      ,
+      async: false,
+      dataType: "json"
+    })
+
+  updtWorkLogServerIds: (data) ->
+    if data.working_log_server_ids
+      wlsis = db.one("infos", {key: "working_log_server_ids"})
+      unless wlsis
+        wlsis = db.ins("infos",
+          {key: "working_log_server_ids"}
+        )
+      wlsis.val = data.working_log_server_ids.join(",")
+      db.upd("infos", wlsis)
+
+  sync:  (server, table_name, data) ->
+    if table_name == "server_ids"
+      for table_name, server_ids of data
+        if server_ids and server_ids[0]
+          for local_id, aserver of server_ids
+            item = db.one(table_name, {id: local_id})
+            if item
+              item.server_id = aserver.id
+              db.upd(table_name, item)
+    else
+      if data
+        for i in data
+          sync_item(server, table_name, i)
+
+  sync_item: = (server, table_name, i) ->
+    if i.project_id
+      project = db.one("projects", {server_id: i.project_id})
+      i.project_id = project.id
+    if i.issue_id
+      issue = db.one("issues", {server_id: i.issue_id})
+      if issue
+        i.issue_id = issue.id
+      else
+        url = "#{server.domain}/api/v1/issues/"
+        url += "#{i.issue_id}.json?token=#{server.token}"
+        $.get(url, (item) ->
+          sync_item(server, "issues", item)
+        )
+        i.issue_id = 0
+    if i.closed_at > 0
+      i.is_closed = true
+    item = db.one(table_name, {server_id: i.id})
+    item = db.one(table_name, {id: i.local_id}) unless item
+    if item
+      item.server_id = i.id
+      i.id = item.id
+      item = i
+      db.upd(table_name, item)
+    else
+      i.server_id = i.id
+      delete i.id
+      item = db.ins(table_name, i)
+
+  prepareNodeServer: () ->
+    unless db.one("servers", {domain: "http://localhost:3000"})
+      dbtype = "local"
+      url = "http://localhost:3000/api/users.json"
+      $.get(url, (data) ->
+        server = db.ins("servers", {
+          domain: "http://localhost:3000",
+          user_id: data.id,
+          has_connect: true,
+          dbtype: dbtype
+        })
+      )
+
+  prepareAddServer: () ->
+    hl.click(".add_server", (e, target)->
+      domain = prompt(
+        'please input domain', 'http://crowdsourcing.dev
+      ')
+      if domain.match("crowdsourcing") or domain.match("cs.mindia.jp")
+        dbtype = "cs"
+        token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c')
+        url = "#{domain}/api/v1/users.json?token=#{token}"
+        $.get(url, (data) ->
+          server = db.ins("servers", {
+            domain: domain,
+            token: token,
+            user_id: data.id,
+            has_connect: true,
+            dbtype: dbtype
+          })
+        )
+      else if domain.match("redmine")
+        dbtype = "redmine"
+        #url = "#{domain}/api/v1/users.json"
+        token = prompt('please input login id', 'nishiko')
+        token = prompt('please input login pass', '')
+        $.get(url, (data) ->
+          db.ins("servers", {
+            domain: domain,
+            login: login,
+            pass: pass,
+            user_id: data.id,
+            has_connect: true,
+            dbtype: dbtype
+          })
+        )
+      else
+        alert "invalid domain"
+    )
+
+
+
+class Servers extends Backbone.collection
+  model: Server
+
+@Server = Server
+@Servers = Servers
+*/
+
+
+(function() {
+
+
+}).call(this);
+
+(function() {
+  var CdownView, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  CdownView = (function(_super) {
+    __extends(CdownView, _super);
+
+    function CdownView() {
+      _ref = CdownView.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    return CdownView;
+
+  })(Backbone.View);
+
+  this.CdownView = CdownView;
+
+}).call(this);
+
 (function() {
   var IssueView, IssuesView, _ref, _ref1,
     __hasProp = {}.hasOwnProperty,
@@ -490,12 +692,11 @@
 }).call(this);
 
 (function() {
-  var addFigure, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
+  var addFigure, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doImport, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, turnback, uicon, updateWorkingLog, wbr, working_log, zero, zp;
 
   init = function() {
     cdown();
     prepareShowProjects();
-    prepareAddServer();
     prepareDoExport();
     prepareDoImport();
     renderProjects();
@@ -503,186 +704,6 @@
     renderWorkLogs();
     $(".calendar").hide();
     return loopRenderWorkLogs();
-  };
-
-  subWin = {};
-
-  fetch = function(server) {
-    var diffs, domain, issue, issues, params, project, projects, server_id, token, url, wlsis, work_log, work_logs, working_log_server_id, working_logs, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
-
-    domain = server.domain;
-    token = server.token;
-    projects = [];
-    issues = [];
-    work_logs = [];
-    _ref = findWillUploads("projects");
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      project = _ref[_i];
-      projects = pushIfHasIssue(project, projects);
-    }
-    _ref1 = findWillUploads("issues");
-    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      issue = _ref1[_j];
-      issues.push(forUploadIssue(issue));
-    }
-    _ref2 = findWillUploads("work_logs");
-    for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-      work_log = _ref2[_k];
-      work_logs.push(forUploadWorkLog(work_log));
-    }
-    diffs = {
-      projects: projects,
-      issues: issues,
-      work_logs: work_logs
-    };
-    working_logs = [];
-    wlsis = db.one("infos", {
-      key: "working_log_server_ids"
-    });
-    if (wlsis && wlsis.val) {
-      _ref3 = wlsis.val.split(",");
-      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-        working_log_server_id = _ref3[_l];
-        server_id = parseInt(working_log_server_id);
-        working_logs.push(db.one("work_logs", {
-          server_id: server_id
-        }));
-      }
-    }
-    params = {
-      token: token,
-      last_fetch: last_fetch(),
-      diffs: diffs,
-      working_logs: working_logs
-    };
-    url = "" + domain + "/api/v1/diffs.json";
-    return $.ajax({
-      type: "POST",
-      url: url,
-      data: params,
-      complete: function(res) {
-        var data;
-
-        data = res.responseText;
-        data = JSON.parse(data);
-        updtWorkLogServerIds(data);
-        sync(server, "server_ids", data.server_ids);
-        sync(server, "projects", data.projects);
-        sync(server, "issues", data.issues);
-        sync(server, "work_logs", data.work_logs);
-        renderWorkLogs(server);
-        return last_fetch(now());
-      },
-      async: false,
-      dataType: "json"
-    });
-  };
-
-  updtWorkLogServerIds = function(data) {
-    var wlsis;
-
-    if (data.working_log_server_ids) {
-      wlsis = db.one("infos", {
-        key: "working_log_server_ids"
-      });
-      if (!wlsis) {
-        wlsis = db.ins("infos", {
-          key: "working_log_server_ids"
-        });
-      }
-      wlsis.val = data.working_log_server_ids.join(",");
-      return db.upd("infos", wlsis);
-    }
-  };
-
-  sync = function(server, table_name, data) {
-    var aserver, i, item, local_id, server_ids, _i, _len, _results, _results1;
-
-    if (table_name === "server_ids") {
-      _results = [];
-      for (table_name in data) {
-        server_ids = data[table_name];
-        if (server_ids && server_ids[0]) {
-          _results.push((function() {
-            var _results1;
-
-            _results1 = [];
-            for (local_id in server_ids) {
-              aserver = server_ids[local_id];
-              item = db.one(table_name, {
-                id: local_id
-              });
-              if (item) {
-                item.server_id = aserver.id;
-                _results1.push(db.upd(table_name, item));
-              } else {
-                _results1.push(void 0);
-              }
-            }
-            return _results1;
-          })());
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    } else {
-      if (data) {
-        _results1 = [];
-        for (_i = 0, _len = data.length; _i < _len; _i++) {
-          i = data[_i];
-          _results1.push(sync_item(server, table_name, i));
-        }
-        return _results1;
-      }
-    }
-  };
-
-  sync_item = function(server, table_name, i) {
-    var issue, item, project, url;
-
-    if (i.project_id) {
-      project = db.one("projects", {
-        server_id: i.project_id
-      });
-      i.project_id = project.id;
-    }
-    if (i.issue_id) {
-      issue = db.one("issues", {
-        server_id: i.issue_id
-      });
-      if (issue) {
-        i.issue_id = issue.id;
-      } else {
-        url = "" + server.domain + "/api/v1/issues/";
-        url += "" + i.issue_id + ".json?token=" + server.token;
-        $.get(url, function(item) {
-          return sync_item(server, "issues", item);
-        });
-        i.issue_id = 0;
-      }
-    }
-    if (i.closed_at > 0) {
-      i.is_closed = true;
-    }
-    item = db.one(table_name, {
-      server_id: i.id
-    });
-    if (!item) {
-      item = db.one(table_name, {
-        id: i.local_id
-      });
-    }
-    if (item) {
-      item.server_id = i.id;
-      i.id = item.id;
-      item = i;
-      return db.upd(table_name, item);
-    } else {
-      i.server_id = i.id;
-      delete i.id;
-      return item = db.ins(table_name, i);
-    }
   };
 
   renderProjects = function() {
@@ -698,72 +719,10 @@
     return $("#wrapper").html(projectsView.render().el);
   };
 
-  prepareNodeServer = function() {
-    var dbtype, url;
-
-    if (!db.one("servers", {
-      domain: "http://localhost:3000"
-    })) {
-      dbtype = "local";
-      url = "http://localhost:3000/api/users.json";
-      return $.get(url, function(data) {
-        var server;
-
-        return server = db.ins("servers", {
-          domain: "http://localhost:3000",
-          user_id: data.id,
-          has_connect: true,
-          dbtype: dbtype
-        });
-      });
-    }
-  };
-
   prepareShowProjects = function() {
     return $(".show_projects").click(function() {
       $(".project").fadeIn(100);
       return $(".issue").fadeIn(100);
-    });
-  };
-
-  prepareAddServer = function() {
-    return hl.click(".add_server", function(e, target) {
-      var dbtype, domain, token, url;
-
-      domain = prompt('please input domain', 'http://crowdsourcing.dev\
-    ');
-      if (domain.match("crowdsourcing") || domain.match("cs.mindia.jp")) {
-        dbtype = "cs";
-        token = prompt('please input the token', '83070ba0c407e9cc80978207e1ea36f66fcaad29b60d2424a7f1ea4f4e332c3c');
-        url = "" + domain + "/api/v1/users.json?token=" + token;
-        return $.get(url, function(data) {
-          var server;
-
-          return server = db.ins("servers", {
-            domain: domain,
-            token: token,
-            user_id: data.id,
-            has_connect: true,
-            dbtype: dbtype
-          });
-        });
-      } else if (domain.match("redmine")) {
-        dbtype = "redmine";
-        token = prompt('please input login id', 'nishiko');
-        token = prompt('please input login pass', '');
-        return $.get(url, function(data) {
-          return db.ins("servers", {
-            domain: domain,
-            login: login,
-            pass: pass,
-            user_id: data.id,
-            has_connect: true,
-            dbtype: dbtype
-          });
-        });
-      } else {
-        return alert("invalid domain");
-      }
     });
   };
 
@@ -912,15 +871,16 @@
       $("#issue_" + issue_id + " h2").click(function() {
         var $e, issue, project, url;
 
-        issue = Issue.find(issue_id);
-        project = issue.project();
+        issue = new Issue().find(issue_id).toJSON();
+        project = new Project().find(issue.project_id).toJSON();
+        console.log(issue);
         url = issue.url;
         if (project.url && !url) {
           url = project.url;
         }
         if (url) {
           startWorkLog(issue_id);
-          subWin = window.open(url, "issue_" + issue_id);
+          window.open(url, "issue_" + issue_id);
         } else {
           $e = $(this).parent().find(".body");
           turnback($e);
