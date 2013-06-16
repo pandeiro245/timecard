@@ -7,10 +7,9 @@ class ProjectView extends Backbone.View
     "click div .edit a": "clickEdit"
     "click div .ddt a" : "clickDdt"
     "keypress div .input-append .input": "pressAddIssue"
-  }
+  },
   pressAddIssue: (e) ->
     if e.which == 13
-      console.log
       title = $(e.target).val()
       project_id = this.model.id
       if title.length > 0
@@ -19,7 +18,13 @@ class ProjectView extends Backbone.View
       else
         alert "please input the title"
   clickEdit: () ->
-    doEditProject(this.model.id)
+    project = new Project().find(this.model.id)
+    p = project.toJSON()
+    project.set({
+      name: prompt('project name', p.name)
+      url : prompt('project url',  p.url)
+    })
+    project.save()
   clickDdt: () ->
     doDdtProject(this.model.id)
   template: _.template($('#project-template').html()),
@@ -34,7 +39,10 @@ class ProjectsView extends Backbone.View
   initialize: () ->
     this.collection.on('add', this.addNew, this)
   addNew: (project) ->
-    projectView = new ProjectView({model: project})
+    projectView = new ProjectView({
+      model: project
+      id   : "project_#{project.id}"
+    })
     this.$el.append(projectView.render().el)
   className: "row-fluid"
   render: () ->
@@ -54,13 +62,19 @@ class AddProjectView extends Backbone.View
   },
   clicked: (e) ->
     e.preventDefault()
-    project = new Project()
     name = prompt('please input the project name', '')
-    issue_title = prompt('please input the issue title', 'add issues')
+    title = prompt('please input the issue title', 'add issues')
+    project = new Project()
+    issue   = new Issue()
     if project.set({name: name}, {validate: true})
-      p = db.ins("projects", {name: name})
-      db.ins("issues", {title: issue_title, project_id: p.id})
+      project.save()
       this.collection.add(project)
+      if issue.set(
+        {
+          title     : title,
+          project_id: project.get("id")
+        }, {validate: true})
+        issue.save()
 
 @ProjectView = ProjectView
 @ProjectsView = ProjectsView

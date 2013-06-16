@@ -121,13 +121,11 @@ sync_item = (server, table_name, i) ->
     item = db.ins(table_name, i)
 
 renderProjects = () ->
-  projects = new Projects(
-    db.find("projects", null, {order: {upd_at: "desc"}})
-  )
+  projects = new Project().find_all()
   projectsView = new ProjectsView({collection: projects})
   addProjectView = new AddProjectView({collection: projects})
   $("#wrapper").html(projectsView.render().el)
-  $("#issues").append(innerLink())
+  #$("#issues").append(innerLink())
 
 prepareNodeServer = () ->
   unless db.one("servers", {domain: "http://localhost:3000"})
@@ -268,17 +266,17 @@ renderProject = (project) ->
 
 innerLink = () ->
   res = "<div class=\"innerlink\"> | "
-  projects = db.find("projects", null, {order: {upd_at: "desc"}})
+  projects = Project.find_all
   for project in projects
     res += "<span class=\"project_#{project.id}\"><a href=\"#project_#{project.id}\">#{project.name}</a> | </span>"
   res += "</div>"
   return res
 
-renderIssues = (issues=null) ->
-  issues = db.find("issues", null, {order:{upd_at:"desc"}}) unless issues
+renderIssues = () ->
+  issues = new Issue().find_all()
   $(".issues").html("")
   i = 1
-  for issue in issues
+  for issue in issues.models
     renderIssue(issue, null, i)
     i = i + 0
   doCard()
@@ -286,8 +284,8 @@ renderIssues = (issues=null) ->
 prepareCards = (issue_id) ->
   $(() ->
     $("#issue_#{issue_id} h2").click(() ->
-      issue = db.one("issues", {id: issue_id})
-      project = db.one("projects", {id: issue.project_id})
+      issue = Issue.find(issue_id)
+      project = issue.project()
       url = issue.url
       url = project.url if project.url and !url
       if url
@@ -316,7 +314,8 @@ prepareCards = (issue_id) ->
     )
   )
 
-renderIssue = (issue, target=null, i = null) ->
+renderIssue = (issueModel, target=null, i = null) ->
+  issue = issueModel.attributes
   target = "append" unless target
   $project = $("#project_#{issue.project_id}")
   $project_issues = $("#project_#{issue.project_id} .issues")
@@ -368,43 +367,32 @@ prepareDD = (issue_id) ->
   })
 
 doDdt = (issue_id) ->
-  issue = db.one("issues", {id: issue_id})
-  if issue.will_start_at < now()
-    issue.will_start_at = now() + 12*3600 + parseInt(Math.random(10)*10000)
-    db.upd("issues", issue)
+  issue = new Issue().find(issue_id)
+  unless issue.is_ddt()
+    issue.set_ddt()
     $("#issue_#{issue.id}").fadeOut(200)
   else
-    issue.will_start_at = null
-    db.upd("issues", issue)
+    issue.cancel_ddt
     location.reload()
 
 doCls = (issue_id) ->
-  issue = db.one("issues", {id: issue_id})
-  issue.closed_at = now()
-  db.upd("issues", issue)
-  $("#issue_#{issue.id}").fadeOut(200)
+  issue = new Issue().find(issue_id)
+  unless issue.is_closed()
+    issue.set_closed()
+    $("#issue_#{issue.id}").fadeOut(200)
+  else
+    issue.cancel_closed()
+    location.reload()
 
 doEditIssue = (issue_id) ->
-  issue = db.one("issues", {id: issue_id})
-  issue.title = prompt('issue title', issue.title)
-  if issue.title.length > 1
-    db.upd("issues", issue)
-  issue.url = prompt('issue url', issue.url)
-  if issue.url.length > 1
-    db.upd("issues", issue)
-  issue.body = prompt('issue body', issue.body)
-  if issue.body.length > 1
-    db.upd("issues", issue)
-  location.reload()
-
-doEditProject = (project_id) ->
-  project = db.one("projects", {id: project_id})
-  project.name = prompt('project name', project.name)
-  if project.name.length > 1
-    db.upd("projects", project)
-  project.url = prompt('project url', project.url)
-  if project.url.length > 1
-    db.upd("projects", project)
+  issue = new Issue().find(issue_id)
+  i = issue.toJSON()
+  issue.set({
+    title: prompt('issue title', i.title)
+    url  : prompt('issue url',   i.url)
+    body : prompt('issue body',  i.body)
+  })
+  issue.save()
   location.reload()
 
 doDdtProject = (project_id) ->
@@ -456,12 +444,6 @@ updateWorkingLog = (is_start=null, issue_id=null) ->
 @addIssue = (project_id, title) ->
   issue = db.ins("issues", {title: title, project_id: project_id, body:""})
   renderIssue(issue, "prepend")
-
-addProject = (name) ->
-  project = db.ins("projects", {name: name})
-  renderProject(project)
-  $("#project_#{project.id}").hide()
-  return project
 
 renderWorkLogs = (server=null) ->
   $("#work_logs").html("")
@@ -613,7 +595,7 @@ hl = window.helpers
 zero = (int) ->
   if int < 10 then "0#{int}" else int
 
-now = () ->
+@now = () ->
   parseInt((new Date().getTime())/1000)
 
 uicon = "<i class=\"icon-circle-arrow-up\"></i>"

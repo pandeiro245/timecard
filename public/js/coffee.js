@@ -1,4 +1,153 @@
 (function() {
+  var JSRelModel, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  JSRelModel = (function(_super) {
+    __extends(JSRelModel, _super);
+
+    function JSRelModel() {
+      _ref = JSRelModel.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    JSRelModel.prototype.initialize = function() {
+      return this.on('invalid', function(model, error) {
+        return alert(error);
+      });
+    };
+
+    JSRelModel.prototype.save = function() {
+      var cond, p;
+
+      cond = this.toJSON();
+      if (cond.id) {
+        return p = db.upd(this.table_name, cond);
+      } else {
+        p = db.ins(this.table_name, cond);
+        return this.set("id", p.id);
+      }
+    };
+
+    JSRelModel.prototype.find = function(id) {
+      return new this.thisclass(db.one(this.table_name, {
+        id: id
+      }));
+    };
+
+    JSRelModel.prototype.find_all = function() {
+      return this.collection(db.find(this.table_name, null, {
+        order: {
+          upd_at: "desc"
+        }
+      }));
+    };
+
+    return JSRelModel;
+
+  })(Backbone.Model);
+
+  this.JSRelModel = JSRelModel;
+
+}).call(this);
+
+(function() {
+  var Issue, Issues, _ref, _ref1,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Issue = (function(_super) {
+    __extends(Issue, _super);
+
+    function Issue() {
+      _ref = Issue.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Issue.prototype.table_name = "issues";
+
+    Issue.prototype.thisclass = function(params) {
+      return new Issue(params);
+    };
+
+    Issue.prototype.collection = function(params) {
+      return new Issues(params);
+    };
+
+    Issue.prototype.validate = function(attrs) {
+      if (_.isEmpty(attrs.title)) {
+        return "issue.title must not be empty";
+      }
+    };
+
+    Issue.prototype.is_ddt = function() {
+      var wsat;
+
+      wsat = this.get("will_start_at");
+      return !(!wsat || wsat < now());
+    };
+
+    Issue.prototype.set_ddt = function() {
+      this.set("will_start_at", now() + 12 * 3600 + parseInt(Math.random(10) * 10000));
+      return this.save();
+    };
+
+    Issue.prototype.cancel_ddt = function() {
+      this.set("will_start_at", null);
+      return this.save();
+    };
+
+    Issue.prototype.is_closed = function() {
+      var cat;
+
+      cat = this.get("closed_at");
+      if (cat > 0) {
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+    Issue.prototype.set_closed = function() {
+      this.set("closed_at", now());
+      return this.save();
+    };
+
+    Issue.prototype.cancel_closed = function() {
+      this.set("closed_at", 0);
+      this.cancel_ddt();
+      return this.save();
+    };
+
+    Issue.prototype.project = function() {
+      return Project.find(this.project_id);
+    };
+
+    return Issue;
+
+  })(JSRelModel);
+
+  Issues = (function(_super) {
+    __extends(Issues, _super);
+
+    function Issues() {
+      _ref1 = Issues.__super__.constructor.apply(this, arguments);
+      return _ref1;
+    }
+
+    Issues.prototype.model = Issue;
+
+    return Issues;
+
+  })(Backbone.Collection);
+
+  this.Issue = Issue;
+
+  this.Issues = Issues;
+
+}).call(this);
+
+(function() {
   var Project, Projects, _ref, _ref1,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -11,21 +160,25 @@
       return _ref;
     }
 
+    Project.prototype.table_name = "projects";
+
+    Project.prototype.thisclass = function(params) {
+      return new Project(params);
+    };
+
+    Project.prototype.collection = function(params) {
+      return new Projects(params);
+    };
+
     Project.prototype.validate = function(attrs) {
       if (_.isEmpty(attrs.name)) {
         return "project name must not be empty";
       }
     };
 
-    Project.prototype.initialize = function() {
-      return this.on('invalid', function(model, error) {
-        return alert(error);
-      });
-    };
-
     return Project;
 
-  })(Backbone.Model);
+  })(JSRelModel);
 
   Projects = (function(_super) {
     __extends(Projects, _super);
@@ -44,6 +197,41 @@
   this.Project = Project;
 
   this.Projects = Projects;
+
+}).call(this);
+
+(function() {
+  var IssueView, IssuesView, _ref, _ref1,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  IssueView = (function(_super) {
+    __extends(IssueView, _super);
+
+    function IssueView() {
+      _ref = IssueView.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    return IssueView;
+
+  })(Backbone.View);
+
+  IssuesView = (function(_super) {
+    __extends(IssuesView, _super);
+
+    function IssuesView() {
+      _ref1 = IssuesView.__super__.constructor.apply(this, arguments);
+      return _ref1;
+    }
+
+    return IssuesView;
+
+  })(Backbone.View);
+
+  this.IssueView = IssueView;
+
+  this.IssuesView = IssuesView;
 
 }).call(this);
 
@@ -78,7 +266,6 @@
       var project_id, title;
 
       if (e.which === 13) {
-        console.log;
         title = $(e.target).val();
         project_id = this.model.id;
         if (title.length > 0) {
@@ -91,7 +278,15 @@
     };
 
     ProjectView.prototype.clickEdit = function() {
-      return doEditProject(this.model.id);
+      var p, project;
+
+      project = new Project().find(this.model.id);
+      p = project.toJSON();
+      project.set({
+        name: prompt('project name', p.name),
+        url: prompt('project url', p.url)
+      });
+      return project.save();
     };
 
     ProjectView.prototype.clickDdt = function() {
@@ -132,7 +327,8 @@
       var projectView;
 
       projectView = new ProjectView({
-        model: project
+        model: project,
+        id: "project_" + project.id
       });
       return this.$el.append(projectView.render().el);
     };
@@ -171,25 +367,28 @@
     };
 
     AddProjectView.prototype.clicked = function(e) {
-      var issue_title, name, p, project;
+      var issue, name, project, title;
 
       e.preventDefault();
-      project = new Project();
       name = prompt('please input the project name', '');
-      issue_title = prompt('please input the issue title', 'add issues');
+      title = prompt('please input the issue title', 'add issues');
+      project = new Project();
+      issue = new Issue();
       if (project.set({
         name: name
       }, {
         validate: true
       })) {
-        p = db.ins("projects", {
-          name: name
-        });
-        db.ins("issues", {
-          title: issue_title,
-          project_id: p.id
-        });
-        return this.collection.add(project);
+        project.save();
+        this.collection.add(project);
+        if (issue.set({
+          title: title,
+          project_id: project.get("id")
+        }, {
+          validate: true
+        })) {
+          return issue.save();
+        }
       }
     };
 
@@ -291,7 +490,7 @@
 }).call(this);
 
 (function() {
-  var addFigure, addProject, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doEditProject, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, now, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
+  var addFigure, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doImport, fetch, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, prepareAddServer, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareNodeServer, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, subWin, sync, sync_item, turnback, uicon, updateWorkingLog, updtWorkLogServerIds, wbr, working_log, zero, zp;
 
   init = function() {
     cdown();
@@ -489,19 +688,14 @@
   renderProjects = function() {
     var addProjectView, projects, projectsView;
 
-    projects = new Projects(db.find("projects", null, {
-      order: {
-        upd_at: "desc"
-      }
-    }));
+    projects = new Project().find_all();
     projectsView = new ProjectsView({
       collection: projects
     });
     addProjectView = new AddProjectView({
       collection: projects
     });
-    $("#wrapper").html(projectsView.render().el);
-    return $("#issues").append(innerLink());
+    return $("#wrapper").html(projectsView.render().el);
   };
 
   prepareNodeServer = function() {
@@ -689,11 +883,7 @@
     var project, projects, res, _i, _len;
 
     res = "<div class=\"innerlink\"> | ";
-    projects = db.find("projects", null, {
-      order: {
-        upd_at: "desc"
-      }
-    });
+    projects = Project.find_all;
     for (_i = 0, _len = projects.length; _i < _len; _i++) {
       project = projects[_i];
       res += "<span class=\"project_" + project.id + "\"><a href=\"#project_" + project.id + "\">" + project.name + "</a> | </span>";
@@ -702,23 +892,15 @@
     return res;
   };
 
-  renderIssues = function(issues) {
-    var i, issue, _i, _len;
+  renderIssues = function() {
+    var i, issue, issues, _i, _len, _ref;
 
-    if (issues == null) {
-      issues = null;
-    }
-    if (!issues) {
-      issues = db.find("issues", null, {
-        order: {
-          upd_at: "desc"
-        }
-      });
-    }
+    issues = new Issue().find_all();
     $(".issues").html("");
     i = 1;
-    for (_i = 0, _len = issues.length; _i < _len; _i++) {
-      issue = issues[_i];
+    _ref = issues.models;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      issue = _ref[_i];
       renderIssue(issue, null, i);
       i = i + 0;
     }
@@ -730,12 +912,8 @@
       $("#issue_" + issue_id + " h2").click(function() {
         var $e, issue, project, url;
 
-        issue = db.one("issues", {
-          id: issue_id
-        });
-        project = db.one("projects", {
-          id: issue.project_id
-        });
+        issue = Issue.find(issue_id);
+        project = issue.project();
         url = issue.url;
         if (project.url && !url) {
           url = project.url;
@@ -768,8 +946,8 @@
     });
   };
 
-  renderIssue = function(issue, target, i) {
-    var $project, $project_issues, btn_type, disp, icon, project, style, title;
+  renderIssue = function(issueModel, target, i) {
+    var $project, $project_issues, btn_type, disp, icon, issue, project, style, title;
 
     if (target == null) {
       target = null;
@@ -777,6 +955,7 @@
     if (i == null) {
       i = null;
     }
+    issue = issueModel.attributes;
     if (!target) {
       target = "append";
     }
@@ -844,16 +1023,12 @@
   doDdt = function(issue_id) {
     var issue;
 
-    issue = db.one("issues", {
-      id: issue_id
-    });
-    if (issue.will_start_at < now()) {
-      issue.will_start_at = now() + 12 * 3600 + parseInt(Math.random(10) * 10000);
-      db.upd("issues", issue);
+    issue = new Issue().find(issue_id);
+    if (!issue.is_ddt()) {
+      issue.set_ddt();
       return $("#issue_" + issue.id).fadeOut(200);
     } else {
-      issue.will_start_at = null;
-      db.upd("issues", issue);
+      issue.cancel_ddt;
       return location.reload();
     }
   };
@@ -861,49 +1036,27 @@
   doCls = function(issue_id) {
     var issue;
 
-    issue = db.one("issues", {
-      id: issue_id
-    });
-    issue.closed_at = now();
-    db.upd("issues", issue);
-    return $("#issue_" + issue.id).fadeOut(200);
+    issue = new Issue().find(issue_id);
+    if (!issue.is_closed()) {
+      issue.set_closed();
+      return $("#issue_" + issue.id).fadeOut(200);
+    } else {
+      issue.cancel_closed();
+      return location.reload();
+    }
   };
 
   doEditIssue = function(issue_id) {
-    var issue;
+    var i, issue;
 
-    issue = db.one("issues", {
-      id: issue_id
+    issue = new Issue().find(issue_id);
+    i = issue.toJSON();
+    issue.set({
+      title: prompt('issue title', i.title),
+      url: prompt('issue url', i.url),
+      body: prompt('issue body', i.body)
     });
-    issue.title = prompt('issue title', issue.title);
-    if (issue.title.length > 1) {
-      db.upd("issues", issue);
-    }
-    issue.url = prompt('issue url', issue.url);
-    if (issue.url.length > 1) {
-      db.upd("issues", issue);
-    }
-    issue.body = prompt('issue body', issue.body);
-    if (issue.body.length > 1) {
-      db.upd("issues", issue);
-    }
-    return location.reload();
-  };
-
-  doEditProject = function(project_id) {
-    var project;
-
-    project = db.one("projects", {
-      id: project_id
-    });
-    project.name = prompt('project name', project.name);
-    if (project.name.length > 1) {
-      db.upd("projects", project);
-    }
-    project.url = prompt('project url', project.url);
-    if (project.url.length > 1) {
-      db.upd("projects", project);
-    }
+    issue.save();
     return location.reload();
   };
 
@@ -1006,17 +1159,6 @@
       body: ""
     });
     return renderIssue(issue, "prepend");
-  };
-
-  addProject = function(name) {
-    var project;
-
-    project = db.ins("projects", {
-      name: name
-    });
-    renderProject(project);
-    $("#project_" + project.id).hide();
-    return project;
   };
 
   renderWorkLogs = function(server) {
@@ -1240,7 +1382,7 @@
     }
   };
 
-  now = function() {
+  this.now = function() {
     return parseInt((new Date().getTime()) / 1000);
   };
 
