@@ -43,6 +43,14 @@
       }));
     };
 
+    JSRelModel.prototype.where = function(cond) {
+      return this.collection(db.find(this.table_name, cond, {
+        order: {
+          upd_at: "desc"
+        }
+      }));
+    };
+
     return JSRelModel;
 
   })(Backbone.Model);
@@ -117,6 +125,13 @@
       this.set("closed_at", 0);
       this.cancel_ddt();
       return this.save();
+    };
+
+    Issue.prototype.is_active = function() {
+      if (!this.is_closed() && !this.is_ddt()) {
+        return true;
+      }
+      return false;
     };
 
     Issue.prototype.project = function() {
@@ -415,6 +430,100 @@ class Servers extends Backbone.collection
       return _ref;
     }
 
+    IssueView.prototype.tagName = 'div';
+
+    IssueView.prototype.className = "issue span3";
+
+    IssueView.prototype.template = _.template($('#issue-template').html());
+
+    IssueView.prototype.events = {
+      "click h2": "doOpenStart",
+      "click div div .card": "doStart",
+      "click div div .cls": "doClose",
+      "click div div .ddt": "doDdt",
+      "click div div .edit": "doEdit"
+    };
+
+    IssueView.prototype.doOpenStart = function() {
+      var $e, issue, project, url;
+
+      issue = this.model.toJSON();
+      project = new Project().find(issue.project_id).toJSON();
+      console.log(issue);
+      url = issue.url;
+      if (project.url && !url) {
+        url = project.url;
+      }
+      if (url) {
+        startWorkLog(issue_id);
+        window.open(url, "issue_" + issue_id);
+      } else {
+        $e = $(this).parent().find(".body");
+        turnback($e);
+      }
+      return false;
+    };
+
+    IssueView.prototype.doStart = function() {
+      return doCard(this.model.id);
+    };
+
+    IssueView.prototype.doClose = function() {
+      var issue;
+
+      issue = this.model;
+      if (!issue.is_closed()) {
+        issue.set_closed();
+        stopWorkLog();
+        return this.$el.fadeOut(200);
+      } else {
+        issue.cancel_closed();
+        return location.reload();
+      }
+    };
+
+    IssueView.prototype.doDdt = function() {
+      var issue;
+
+      issue = this.model;
+      if (!issue.is_ddt()) {
+        issue.set_ddt();
+        stopWorkLog();
+        return this.$el.fadeOut(200);
+      } else {
+        issue.cancel_ddt();
+        return location.reload();
+      }
+    };
+
+    IssueView.prototype.doEdit = function() {
+      var i, issue;
+
+      issue = this.model;
+      i = issue.toJSON();
+      issue.set({
+        title: prompt('issue title', i.title),
+        url: prompt('issue url', i.url),
+        body: prompt('issue body', i.body)
+      });
+      issue.save();
+      return location.reload();
+    };
+
+    IssueView.prototype.render = function() {
+      var issue, template;
+
+      issue = this.model.toJSON();
+      template = this.template(issue);
+      this.$el.html(template);
+      if (this.model.is_active()) {
+        $("#project_" + issue.project_id).show();
+      } else {
+        this.$el.hide();
+      }
+      return this;
+    };
+
     return IssueView;
 
   })(Backbone.View);
@@ -426,6 +535,8 @@ class Servers extends Backbone.collection
       _ref1 = IssuesView.__super__.constructor.apply(this, arguments);
       return _ref1;
     }
+
+    IssuesView.prototype.tagName = 'div';
 
     return IssuesView;
 
@@ -692,7 +803,7 @@ class Servers extends Backbone.collection
 }).call(this);
 
 (function() {
-  var addFigure, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doCard, doCls, doDdt, doDdtProject, doEditIssue, doImport, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, prepareCards, prepareDD, prepareDoExport, prepareDoImport, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderIssue, renderIssues, renderProject, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, stopWorkLog, turnback, uicon, updateWorkingLog, wbr, working_log, zero, zp;
+  var addFigure, apDay, cdown, checkImport, db, debug, dispDate, dispTime, doDdtProject, doImport, findIssueByWorkLog, findProjectByIssue, findWillUploads, forUploadIssue, forUploadWorkLog, hl, init, innerLink, last_fetch, loopFetch, loopRenderWorkLogs, prepareDoExport, prepareDoImport, prepareShowProjects, pushIfHasIssue, renderCalendar, renderCalendars, renderProjects, renderWorkLogs, renderWorkingLog, setInfo, startWorkLog, turnback, uicon, updateWorkingLog, wbr, working_log, zero, zp;
 
   init = function() {
     cdown();
@@ -700,14 +811,13 @@ class Servers extends Backbone.collection
     prepareDoExport();
     prepareDoImport();
     renderProjects();
-    renderIssues();
     renderWorkLogs();
     $(".calendar").hide();
     return loopRenderWorkLogs();
   };
 
   renderProjects = function() {
-    var addProjectView, projects, projectsView;
+    var addProjectView, issue, issueView, issues, projects, projectsView, _i, _len, _ref, _results;
 
     projects = new Project().find_all();
     projectsView = new ProjectsView({
@@ -716,7 +826,19 @@ class Servers extends Backbone.collection
     addProjectView = new AddProjectView({
       collection: projects
     });
-    return $("#wrapper").html(projectsView.render().el);
+    $("#wrapper").html(projectsView.render().el);
+    issues = new Issue().find_all();
+    _ref = issues.models;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      issue = _ref[_i];
+      issueView = new IssueView({
+        model: issue,
+        id: "issue_" + issue.id
+      });
+      _results.push($("#project_" + (issue.get('project_id')) + " div .issues").append(issueView.render().el));
+    }
+    return _results;
   };
 
   prepareShowProjects = function() {
@@ -806,38 +928,6 @@ class Servers extends Backbone.collection
     return true;
   };
 
-  renderProject = function(project) {
-    var projectView, project_name;
-
-    projectView = new ProjectView({
-      model: project,
-      id: "project_" + project.id
-    });
-    project_name = project.get("name");
-    if (project.url) {
-      project_name = "<a href=\"" + (project.get('url')) + "\" target=\"_blank\">" + project_name + "</a>";
-    }
-    $("#project_" + project.id).hide();
-    return $("#project_" + project.id + " div h1").droppable({
-      over: function(event, ui) {
-        return $(this).css("background", "#fc0");
-      },
-      out: function(event, ui) {
-        return $(this).css("background", "#efe");
-      },
-      drop: function(event, ui) {
-        var issue;
-
-        issue = db.one("issues", {
-          id: window.dragging_issue_id
-        });
-        issue.project_id = project.id;
-        db.upd("issues", issue);
-        return location.reload();
-      }
-    });
-  };
-
   innerLink = function() {
     var project, projects, res, _i, _len;
 
@@ -849,176 +939,6 @@ class Servers extends Backbone.collection
     }
     res += "</div>";
     return res;
-  };
-
-  renderIssues = function() {
-    var i, issue, issues, _i, _len, _ref;
-
-    issues = new Issue().find_all();
-    $(".issues").html("");
-    i = 1;
-    _ref = issues.models;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      issue = _ref[_i];
-      renderIssue(issue, null, i);
-      i = i + 0;
-    }
-    return doCard();
-  };
-
-  prepareCards = function(issue_id) {
-    return $(function() {
-      $("#issue_" + issue_id + " h2").click(function() {
-        var $e, issue, project, url;
-
-        issue = new Issue().find(issue_id).toJSON();
-        project = new Project().find(issue.project_id).toJSON();
-        console.log(issue);
-        url = issue.url;
-        if (project.url && !url) {
-          url = project.url;
-        }
-        if (url) {
-          startWorkLog(issue_id);
-          window.open(url, "issue_" + issue_id);
-        } else {
-          $e = $(this).parent().find(".body");
-          turnback($e);
-        }
-        return false;
-      });
-      $("#issue_" + issue_id + " div div .card").click(function() {
-        doCard(issue_id);
-        return false;
-      });
-      $("#issue_" + issue_id + " div div .ddt").click(function() {
-        doDdt(issue_id);
-        return false;
-      });
-      $("#issue_" + issue_id + " div div .cls").click(function() {
-        doCls(issue_id);
-        return false;
-      });
-      return $("#issue_" + issue_id + " div div .edit").click(function() {
-        doEditIssue(issue_id);
-        return false;
-      });
-    });
-  };
-
-  renderIssue = function(issueModel, target, i) {
-    var $project, $project_issues, btn_type, disp, icon, issue, project, style, title;
-
-    if (target == null) {
-      target = null;
-    }
-    if (i == null) {
-      i = null;
-    }
-    issue = issueModel.attributes;
-    if (!target) {
-      target = "append";
-    }
-    $project = $("#project_" + issue.project_id);
-    $project_issues = $("#project_" + issue.project_id + " .issues");
-    title = "" + issue.title;
-    project = db.one("projects", {
-      id: issue.project_id
-    });
-    if (issue.url || project.url) {
-      title = "<a class=\"title\" href=\"#\">" + issue.title + "</a>";
-    }
-    icon = issue.server_id ? "" : uicon;
-    disp = "Start";
-    btn_type = "btn-primary";
-    if (working_log() && working_log().issue_id === issue.id) {
-      disp = "Stop";
-      btn_type = "btn-warning";
-    }
-    style = "";
-    if (i % 4 === 1) {
-      style = "style=\"margin-left:0;\"";
-    }
-    return umecob({
-      use: 'jquery',
-      tpl: views_issue,
-      data: {
-        issue: issue,
-        title: title,
-        icon: icon,
-        disp: disp,
-        btn_type: btn_type,
-        style: style
-      }
-    }).next(function(html) {
-      if (target === "append") {
-        $project_issues.append(html);
-      } else {
-        $project_issues.prepend(html);
-      }
-      if ((!issue.will_start_at || issue.will_start_at < now()) && (!issue.closed_at || issue.closed_at === 0)) {
-        $("#issue_" + issue.id).fadeIn(200);
-        $(".innerlink .project_" + issue.project_id).fadeIn(200);
-        $("#project_" + issue.project_id).fadeIn(200);
-      } else {
-        $("#issue_" + issue.id).fadeOut(200);
-        $("#issue_" + issue.id).css("background", "#666");
-      }
-      prepareCards(issue.id);
-      return prepareDD(issue.id);
-    });
-  };
-
-  prepareDD = function(issue_id) {
-    var $issue;
-
-    $issue = $("#issue_" + issue_id);
-    return $issue.draggable({
-      drag: function() {
-        return window.dragging_issue_id = issue_id;
-      }
-    });
-  };
-
-  doDdt = function(issue_id) {
-    var issue;
-
-    issue = new Issue().find(issue_id);
-    if (!issue.is_ddt()) {
-      issue.set_ddt();
-      stopWorkLog();
-      return $("#issue_" + issue.id).fadeOut(200);
-    } else {
-      issue.cancel_ddt;
-      return location.reload();
-    }
-  };
-
-  doCls = function(issue_id) {
-    var issue;
-
-    issue = new Issue().find(issue_id);
-    if (!issue.is_closed()) {
-      issue.set_closed();
-      return $("#issue_" + issue.id).fadeOut(200);
-    } else {
-      issue.cancel_closed();
-      return location.reload();
-    }
-  };
-
-  doEditIssue = function(issue_id) {
-    var i, issue;
-
-    issue = new Issue().find(issue_id);
-    i = issue.toJSON();
-    issue.set({
-      title: prompt('issue title', i.title),
-      url: prompt('issue url', i.url),
-      body: prompt('issue body', i.body)
-    });
-    issue.save();
-    return location.reload();
   };
 
   doDdtProject = function(project_id) {
@@ -1039,7 +959,7 @@ class Servers extends Backbone.collection
     return _results;
   };
 
-  doCard = function(issue_id) {
+  this.doCard = function(issue_id) {
     if (issue_id == null) {
       issue_id = null;
     }
@@ -1050,8 +970,10 @@ class Servers extends Backbone.collection
     return updateWorkingLog(true, issue_id);
   };
 
-  stopWorkLog = function() {
-    return updateWorkingLog(false);
+  this.stopWorkLog = function() {
+    if (working_log()) {
+      return updateWorkingLog(false);
+    }
   };
 
   updateWorkingLog = function(is_start, issue_id) {

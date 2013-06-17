@@ -6,7 +6,7 @@ body{
   word-wrap: break-word!important;
 }
 
-.project, .issue .body{
+.project, .issue .body{ 
   display: none;
 }
 

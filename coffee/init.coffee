@@ -6,7 +6,6 @@ init = () ->
   prepareDoExport()
   prepareDoImport()
   renderProjects()
-  renderIssues()
   renderWorkLogs()
   #renderCalendars()
   $(".calendar").hide()
@@ -15,9 +14,22 @@ init = () ->
 
 renderProjects = () ->
   projects = new Project().find_all()
-  projectsView = new ProjectsView({collection: projects})
-  addProjectView = new AddProjectView({collection: projects})
+  projectsView = new ProjectsView({
+    collection: projects
+  })
+  addProjectView = new AddProjectView({
+    collection: projects
+  })
   $("#wrapper").html(projectsView.render().el)
+  issues = new Issue().find_all()
+  for issue in issues.models
+    issueView = new IssueView({
+      model: issue
+      id   : "issue_#{issue.id}"
+    })
+    $("#project_#{issue.get('project_id')} div .issues").append(
+      issueView.render().el
+    )
 
 prepareShowProjects = () ->
   $(".show_projects").click(() ->
@@ -28,11 +40,11 @@ prepareShowProjects = () ->
 prepareDoExport = () ->
   hl.click(".do_export", (e, target)->
     result = {
-      projects: db.find("projects"),
-      issues: db.find("issues"),
+      projects : db.find("projects"),
+      issues   : db.find("issues"),
       work_logs: db.find("work_logs"),
-      servers: db.find("servers"),
-      infos: db.find("infos"),
+      servers  : db.find("servers"),
+      infos    : db.find("infos"),
     }
     blob = new Blob([JSON.stringify(result)])
     url = window.URL.createObjectURL(blob)
@@ -83,29 +95,6 @@ doImport = (json) ->
       db.ins(table_name, item)
   return true
 
-renderProject = (project) ->
-  projectView = new ProjectView({
-    model: project,
-    id   : "project_#{project.id}"
-  })
-
-  project_name = project.get("name")
-  project_name = "<a href=\"#{project.get('url')}\" target=\"_blank\">#{project_name}</a>" if project.url
-
-  $("#project_#{project.id}").hide()
-  $("#project_#{project.id} div h1").droppable({
-    over: (event, ui) ->
-      $(this).css("background", "#fc0")
-    ,
-    out: (event, ui) ->
-      $(this).css("background", "#efe")
-    drop: (event, ui) ->
-      issue = db.one("issues", {id: window.dragging_issue_id})
-      issue.project_id = project.id
-      db.upd("issues", issue)
-      location.reload()
-  })
-
 innerLink = () ->
   res = "<div class=\"innerlink\"> | "
   projects = Project.find_all
@@ -114,143 +103,18 @@ innerLink = () ->
   res += "</div>"
   return res
 
-renderIssues = () ->
-  issues = new Issue().find_all()
-  $(".issues").html("")
-  i = 1
-  for issue in issues.models
-    renderIssue(issue, null, i)
-    i = i + 0
-  doCard()
-
-prepareCards = (issue_id) ->
-  $(() ->
-    $("#issue_#{issue_id} h2").click(() ->
-      issue = new Issue().find(issue_id).toJSON()
-      project = new Project().find(issue.project_id).toJSON()
-      console.log issue
-      url = issue.url
-      url = project.url if project.url and !url
-      if url
-        startWorkLog(issue_id)
-        window.open(url, "issue_#{issue_id}")
-      else
-        $e = $(this).parent().find(".body")
-        turnback($e)
-      return false
-    )
-    $("#issue_#{issue_id} div div .card").click(() ->
-      doCard(issue_id)
-      return false
-    )
-    $("#issue_#{issue_id} div div .ddt").click(() ->
-      doDdt(issue_id)
-      return false
-    )
-    $("#issue_#{issue_id} div div .cls").click(() ->
-      doCls(issue_id)
-      return false
-    )
-    $("#issue_#{issue_id} div div .edit").click(() ->
-      doEditIssue(issue_id)
-      return false
-    )
-  )
-
-renderIssue = (issueModel, target=null, i = null) ->
-  issue = issueModel.attributes
-  target = "append" unless target
-  $project = $("#project_#{issue.project_id}")
-  $project_issues = $("#project_#{issue.project_id} .issues")
-  title = "#{issue.title}"
-  project = db.one("projects", {id: issue.project_id})
-  if (issue.url or project.url)
-    title = "<a class=\"title\" href=\"#\">#{issue.title}</a>" 
-  icon = if issue.server_id then "" else uicon
-
-  disp = "Start"
-  btn_type = "btn-primary"
-  if working_log() && working_log().issue_id == issue.id
-    disp = "Stop"
-    btn_type = "btn-warning"
-
-  style = ""
-  if i%4 == 1
-    style = "style=\"margin-left:0;\""
-
-  #umecob({use: 'jquery', tpl_id: "./partials/issue.html", data:{
-  umecob({use: 'jquery', tpl: views_issue, data:{
-    issue: issue,
-    title: title,
-    icon: icon,
-    disp: disp,
-    btn_type: btn_type,
-    style: style
-  }}).next((html) ->
-    if target == "append"
-      $project_issues.append(html)
-    else
-      $project_issues.prepend(html)
-    if (!issue.will_start_at or issue.will_start_at < now() ) and (!issue.closed_at or issue.closed_at == 0)
-      $("#issue_#{issue.id}").fadeIn(200)
-      $(".innerlink .project_#{issue.project_id}").fadeIn(200)
-      $("#project_#{issue.project_id}").fadeIn(200)
-    else
-      $("#issue_#{issue.id}").fadeOut(200)
-      $("#issue_#{issue.id}").css("background", "#666")
-    prepareCards(issue.id)
-    prepareDD(issue.id)
-  )
-
-prepareDD = (issue_id) ->
-  $issue = $("#issue_#{issue_id}")
-  $issue.draggable({
-    drag: ()->
-      window.dragging_issue_id = issue_id
-  })
-
-doDdt = (issue_id) ->
-  issue = new Issue().find(issue_id)
-  unless issue.is_ddt()
-    issue.set_ddt()
-    stopWorkLog()
-    $("#issue_#{issue.id}").fadeOut(200)
-  else
-    issue.cancel_ddt
-    location.reload()
-
-doCls = (issue_id) ->
-  issue = new Issue().find(issue_id)
-  unless issue.is_closed()
-    issue.set_closed()
-    $("#issue_#{issue.id}").fadeOut(200)
-  else
-    issue.cancel_closed()
-    location.reload()
-
-doEditIssue = (issue_id) ->
-  issue = new Issue().find(issue_id)
-  i = issue.toJSON()
-  issue.set({
-    title: prompt('issue title', i.title)
-    url  : prompt('issue url',   i.url)
-    body : prompt('issue body',  i.body)
-  })
-  issue.save()
-  location.reload()
-
 doDdtProject = (project_id) ->
   for issue in db.find("issues", {project_id: project_id})
     doDdt(issue.id) if issue.will_start_at < now()
 
-doCard = (issue_id = null) ->
+@doCard = (issue_id = null) ->
   updateWorkingLog(null, issue_id)
 
 startWorkLog = (issue_id) ->
   updateWorkingLog(true, issue_id)
 
-stopWorkLog = () ->
-  updateWorkingLog(false)
+@stopWorkLog = () ->
+  updateWorkingLog(false) if working_log()
 
 updateWorkingLog = (is_start=null, issue_id=null) ->
   $all_cards = $(".card")

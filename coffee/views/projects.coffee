@@ -1,13 +1,13 @@
 class ProjectView extends Backbone.View
-  tagName: 'div',
-  className: 'project',
+  tagName: 'div'
+  className: 'project'
   initialize: () ->
     this.model.on('change', this.render, this)
   events: {
     "click div .edit a": "clickEdit"
     "click div .ddt a" : "clickDdt"
     "keypress div .input-append .input": "pressAddIssue"
-  },
+  }
   pressAddIssue: (e) ->
     if e.which == 13
       title = $(e.target).val()

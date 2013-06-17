@@ -20,4 +20,10 @@ class JSRelModel extends Backbone.Model
         order: {upd_at: "desc"}
       })
     )
+  where : (cond) ->
+    return this.collection(
+      db.find(this.table_name, cond, {
+        order: {upd_at: "desc"}
+      })
+    ) 
 @JSRelModel = JSRelModel

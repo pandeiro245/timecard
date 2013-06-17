@@ -7,7 +7,6 @@ class Issue extends JSRelModel
     return new Issues(params)
   #for JSRelmodel end
 
-
   validate: (attrs) ->
     if _.isEmpty(attrs.title)
       return "issue.title must not be empty"
@@ -33,6 +32,10 @@ class Issue extends JSRelModel
     this.set("closed_at", 0)
     this.cancel_ddt()
     this.save()
+  is_active: () ->
+    return true if !this.is_closed() && !this.is_ddt()
+    return false
+
   project: () ->
     return Project.find(this.project_id)
 class Issues extends Backbone.Collection
