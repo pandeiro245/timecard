@@ -46,3 +46,14 @@ end
 
 gem 'devise'
 gem 'omniauth-github'
+
+group :development do
+  gem 'guard-livereload'
+  gem 'guard-rspec'
+end
+
+group :development, :test do
+  gem 'rspec-rails'
+  gem 'factory_girl_rails'
+  gem 'spring'
+end
