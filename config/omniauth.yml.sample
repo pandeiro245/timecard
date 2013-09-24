@@ -1,0 +1,9 @@
+development:
+  github:
+    key: "your-github-api-key"
+    secret: "your-github-api-secret"
+
+production:
+  github:
+    key: "your-github-api-key"
+    secret: "your-github-api-secret"
