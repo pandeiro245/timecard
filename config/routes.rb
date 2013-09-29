@@ -1,4 +1,6 @@
 Timecard::Application.routes.draw do
+  resources :projects
+
   delete "users/disconnect/:provider", to: "users#disconnect", as: :disconnect_provider
   devise_for :users, controllers:  { omniauth_callbacks: "users/omniauth_callbacks" }
   root :to => "home#index"

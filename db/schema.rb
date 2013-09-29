@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20130928085505) do
+ActiveRecord::Schema.define(version: 20130928175317) do
 
   create_table "authentications", force: true do |t|
     t.integer  "user_id",     default: 0,  null: false
@@ -19,6 +19,24 @@ ActiveRecord::Schema.define(version: 20130928085505) do
     t.integer  "uid",         default: 0,  null: false
     t.string   "username",    default: "", null: false
     t.string   "oauth_token", default: "", null: false
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  create_table "members", force: true do |t|
+    t.integer  "user_id",    default: 0,     null: false
+    t.integer  "project_id", default: 0,     null: false
+    t.boolean  "is_admin",   default: false, null: false
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  create_table "projects", force: true do |t|
+    t.string   "name",        default: "",   null: false
+    t.text     "description"
+    t.boolean  "is_public",   default: true, null: false
+    t.integer  "parent_id"
+    t.integer  "status",      default: 1,    null: false
     t.datetime "created_at"
     t.datetime "updated_at"
   end

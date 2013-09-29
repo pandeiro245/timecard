@@ -6,6 +6,7 @@ class User < ActiveRecord::Base
          :omniauthable, omniauth_providers: [:github]
 
   has_many :authentications, dependent: :destroy
+  has_many :members, dependent: :destroy
 
   def apply_omniauth_with_github(omniauth)
     self.email = omniauth.info.email if self.email.blank?
