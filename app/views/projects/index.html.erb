@@ -1,35 +1,22 @@
-<h1>Listing projects</h1>
-
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Description</th>
-      <th>Is public</th>
-      <th>Parent</th>
-      <th>Status</th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-
-  <tbody>
-    <% @projects.each do |project| %>
-      <tr>
-        <td><%= project.name %></td>
-        <td><%= project.description %></td>
-        <td><%= project.is_public %></td>
-        <td><%= project.parent_id %></td>
-        <td><%= project.status %></td>
-        <td><%= link_to 'Show', project %></td>
-        <td><%= link_to 'Edit', edit_project_path(project) %></td>
-        <td><%= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' } %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
-
-<br>
-
-<%= link_to 'New Project', new_project_path %>
+<div class="new-project" style="margin-bottom:20px">
+  <%= link_to "New Project", new_project_path, class: "btn btn-default" %>
+</div>
+<div class="row">
+  <% @projects.each do |project| %>
+    <div class="col-md-4" style="margin-bottom:20px;">
+      <%= div_for project, style: "height:200px;" do %>
+        <div class="project-name">
+          <%= link_to project.name, project %>
+        </div>
+        <div>
+          <p><%= project.description.truncate(50) %></p>
+        </div>
+        <div id="members">
+          <% project.members.each do |member| %>
+            <%= member.user.email %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

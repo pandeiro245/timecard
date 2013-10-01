@@ -7,6 +7,7 @@ class Project < ActiveRecord::Base
   scope :public, -> { where(is_public: true) }
 
   has_many :members, dependent: :destroy
+  has_many :issues, dependent: :destroy
 
   validates :name, presence: true
 end

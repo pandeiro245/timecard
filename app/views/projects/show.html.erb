@@ -1,27 +1,38 @@
-<p>
-  <strong>Name:</strong>
-  <%= @project.name %>
-</p>
-
-<p>
-  <strong>Description:</strong>
-  <%= @project.description %>
-</p>
-
-<p>
-  <strong>Is public:</strong>
-  <%= @project.is_public %>
-</p>
-
-<p>
-  <strong>Parent:</strong>
-  <%= @project.parent_id %>
-</p>
-
-<p>
-  <strong>Status:</strong>
-  <%= @project.status %>
-</p>
-
-<%= link_to 'Edit', edit_project_path(@project) %> |
-<%= link_to 'Back', projects_path %>
+<%= link_to "Back to all projects", projects_path %>
+<div class="project-header" style="position:relative;">
+  <div class="project-name">
+    <h2>
+      <%= @project.name %>
+    </h2>
+  </div>
+  <div class="project-description">
+    <p><%= @project.description %></p>
+  </div>
+  <div class="project-is-public">
+    <% if @project.is_public %>
+      <span class="label label-info">Public</span>
+    <% else %>
+      <span class="label label-default">Private</span>
+    <% end %>
+  </div>
+  <div style="position:absolute;top:0;right:0;">
+    <%= link_to "Edit", edit_project_path(@project), class: "btn btn-default" %>
+    <%= link_to "Archive", nil, class: "btn btn-default" %>
+    <%= link_to "Destroy", @project, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
+  </div>
+</div>
+<div class="section">
+  <h3>
+    Issue
+    <%= link_to "Add a issue", new_project_issue_path(@project), class: "btn btn-xs btn-default" %>
+  </h3>
+  <div id="issues">
+    <ul class="media-list">
+      <% @project.issues.each do |issue| %>
+        <li class="media">
+          <%= link_to issue.subject, [@project, issue] %>
+        </li>
+      <% end %>
+    </ul> 
+  </div>
+</div>

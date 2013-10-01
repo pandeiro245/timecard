@@ -1,0 +1,30 @@
+<%= link_to "Back to project", @project %>
+<div class="issue-heaeder" style="margin-top:20px;position:relative;">
+  <div class="issue-author">
+    <%= @issue.author.email %> opened this issue <%= time_ago_in_words(@issue.created_at) %> ago
+  </div>
+  <div class="issue-subject">
+    <h2 style="margin:0">
+      <%= @issue.subject %>
+    </h2>
+  </div>
+  <div class="issue-description">
+    <%= simple_format(@issue.description) %>
+  </div>
+  <div class="issue-status">
+    <% if @issue.status == 1 %>
+      <span class="label label-success">Open</span>
+    <% else %>
+      <span class="label label-danger">Close</span>
+    <% end %>
+  </div>
+  <div style="position:absolute;top:0;right:0;">
+    <%= link_to "Start", nil, class: "btn btn-primary" %>
+    <%= link_to "Edit", edit_project_issue_path(@project, @issue), class: "btn btn-default" %>
+    <% if @issue.status == 1 %>
+      <%= link_to "Close", close_project_issue_path(@project, @issue), class: "btn btn-danger", confirm: "Are you sure?", method: :patch %>
+    <% else %>
+      <%= link_to "Open", reopen_project_issue_path(@project, @issue), class: "btn btn-default", method: :patch %>
+    <% end %>
+  </div>
+</div>
