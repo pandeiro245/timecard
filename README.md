@@ -1,28 +1,18 @@
-== README
+Timecard
+========
+Timecardとはクリエイターが好きな時に好きなだけ働ける環境をサポートする仕組みです。
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Feature
+-------
+* プロジェクト機能
+* Github Issueとの同期
+* Issue単位の作業時間の記録
 
-Things you may want to cover:
-
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
-
-
-Please feel free to use a different markup language if you do not plan to run
-<tt>rake doc:app</tt>.
+Setup
+-----
+    $ git clone git@github.com:mindia/timecard.git
+    $ cd timecard/
+    $ bundle install
+    $ rake db:migrate RAILS_ENV=production
+    $ rake assets:precompile RAILS_ENV=production
+    $ cp config/omniauth.yml.sample config/omniauth.yml # setup Github Client ID and Client Secret
