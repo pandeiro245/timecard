@@ -1,4 +1,13 @@
 Timecard::Application.routes.draw do
+  resources :work_logs, only: [:edit, :update, :destroy]
+
+  resources :issues, only: [:show, :edit, :update, :destroy] do
+    resources :work_logs, only: [:start, :stop] do
+      patch :start, on: :member
+      patch :stop, on: :member
+    end
+  end
+
   resources :projects do
     resources :issues do
       patch :close, on: :member

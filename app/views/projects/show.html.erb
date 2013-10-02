@@ -36,3 +36,18 @@
     </ul> 
   </div>
 </div>
+<div class="section">
+  <h3>
+    WorkLogs
+  </h3>
+  <div id="work-logs">
+    <ul class="media-list">
+      <% WorkLog.where(issue_id: @project.issues.pluck(:id)).order("updated_at DESC").each do |work_log| %>
+        <li class="media">
+          <%= work_log.user.email %><br />
+          Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>
