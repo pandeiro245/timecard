@@ -30,7 +30,7 @@
     <ul class="media-list">
       <% @project.issues.each do |issue| %>
         <li class="media">
-          <%= link_to issue.subject, [@project, issue] %>
+          <%= link_to issue.subject, issue %>
         </li>
       <% end %>
     </ul> 

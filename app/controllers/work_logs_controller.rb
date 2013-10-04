@@ -43,7 +43,7 @@ class WorkLogsController < ApplicationController
   def update
     respond_to do |format|
       if @work_log.update(work_log_params)
-        format.html { redirect_to [@work_log.issue.project, @work_log.issue], notice: 'Work log was successfully updated.' }
+        format.html { redirect_to @work_log.issue, notice: 'Work log was successfully updated.' }
         format.json { head :no_content }
       else
         format.html { render action: 'edit' }
@@ -57,7 +57,7 @@ class WorkLogsController < ApplicationController
   def destroy
     @work_log.destroy
     respond_to do |format|
-      format.html { redirect_to [@work_log.issue.project, @work_log.issue] }
+      format.html { redirect_to @work_log.issue }
       format.json { head :no_content }
     end
   end
@@ -68,7 +68,7 @@ class WorkLogsController < ApplicationController
 
     if @work_log.save
       respond_to do |format|
-        format.html { redirect_to [@issue.project, @issue], notice: 'Work log was successfully started.' }
+        format.html { redirect_to @issue, notice: 'Work log was successfully started.' }
         format.json { render action: 'show', status: :created, location: @work_log }
       end
     end
@@ -80,7 +80,7 @@ class WorkLogsController < ApplicationController
 
     if @work_log.update_attribute(:end_at, Time.now.utc)
       respond_to do |format|
-        format.html { redirect_to [@issue.project, @issue], notice: 'Work log was successfully stopped.' }
+        format.html { redirect_to @issue, notice: 'Work log was successfully stopped.' }
         format.json { render action: 'show', status: :created, location: @work_log }
       end
     end
