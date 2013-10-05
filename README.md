@@ -16,3 +16,4 @@ Setup
     $ rake db:migrate RAILS_ENV=production
     $ rake assets:precompile RAILS_ENV=production
     $ cp config/omniauth.yml.sample config/omniauth.yml # setup Github Client ID and Client Secret
+      (callback URL is project root ex: http:/yoursite.example.com/)
