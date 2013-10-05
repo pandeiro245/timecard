@@ -3,12 +3,6 @@ class IssuesController < ApplicationController
   before_action :set_project, only: [:new, :create]
   before_action :set_issue, only: [:show, :edit, :update, :destroy, :close, :reopen]
 
-  # GET /issues
-  # GET /issues.json
-  def index
-    @issues = Issue.all
-  end
-
   # GET /issues/1
   # GET /issues/1.json
   def show
@@ -51,16 +45,6 @@ class IssuesController < ApplicationController
         format.html { render action: 'edit' }
         format.json { render json: @issue.errors, status: :unprocessable_entity }
       end
-    end
-  end
-
-  # DELETE /issues/1
-  # DELETE /issues/1.json
-  def destroy
-    @issue.destroy
-    respond_to do |format|
-      format.html { redirect_to issues_url }
-      format.json { head :no_content }
     end
   end
 
