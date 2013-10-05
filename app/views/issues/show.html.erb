@@ -39,6 +39,7 @@
       <li class="media">
         <div style="position:relative;">
           <%= work_log.user.email %><br />
+          WorkTime <%= formatted_time_distance(work_log.start_at, work_log.end_at) %><br />
           Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
           <div style="position:absolute;top:0;right:0;">
             <%= link_to "Edit", edit_work_log_path(work_log), class: "btn btn-default" %>

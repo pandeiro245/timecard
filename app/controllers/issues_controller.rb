@@ -12,6 +12,7 @@ class IssuesController < ApplicationController
   # GET /issues/1
   # GET /issues/1.json
   def show
+    @title = @issue.subject
   end
 
   # GET /issues/new
