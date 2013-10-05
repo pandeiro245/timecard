@@ -20,15 +20,15 @@
   </div>
   <div style="position:absolute;top:0;right:0;">
     <% if current_user.work_logs.running? %>
-      <%= link_to "Stop", stop_issue_work_log_path(@issue, current_user.work_logs.running), class: "btn btn-danger", method: :patch %>
+      <%= link_to "Stop", stop_work_log_path(current_user.work_logs.running), class: "btn btn-danger", method: :patch %>
     <% else %>
-      <%= link_to "Start", start_issue_work_log_path(issue_id: @issue), class: "btn btn-primary", method: :patch %>
+      <%= link_to "Start", start_issue_work_logs_path(issue_id: @issue), class: "btn btn-primary", method: :post %>
     <% end %>
     <%= link_to "Edit", edit_issue_path(@issue), class: "btn btn-default" %>
     <% if @issue.status == 1 %>
       <%= link_to "Close", close_issue_path(@issue), class: "btn btn-danger", confirm: "Are you sure?", method: :patch %>
     <% else %>
-      <%= link_to "Open", reopen_issue_path(@issue), class: "btn btn-default", method: :patch %>
+      <%= link_to "Reopen", reopen_issue_path(@issue), class: "btn btn-default", method: :patch %>
     <% end %>
   </div>
 </div>

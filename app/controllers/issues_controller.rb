@@ -51,7 +51,7 @@ class IssuesController < ApplicationController
   # PATCH/PUT projects/1/issues/1/close
   # PATCH/PUT projects/1/issues/1/close.json
   def close
-    if @issue.update_attribute(:status, 9)
+    if @issue.update_attributes({ status: 9, closed_on: Time.now.utc })
       respond_to do |format|
         format.html { redirect_to @issue, notice: 'Issue was successfully updated.' }
         format.json { head :no_content }

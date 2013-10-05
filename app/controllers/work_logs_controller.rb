@@ -1,6 +1,6 @@
 class WorkLogsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_work_log, only: [:edit, :update, :destroy]
+  before_action :set_work_log, only: [:edit, :update, :destroy, :stop]
 
   # GET /work_logs/1/edit
   def edit
@@ -43,12 +43,9 @@ class WorkLogsController < ApplicationController
   end
 
   def stop
-    @issue = Issue.find(params[:issue_id])
-    @work_log = @issue.work_logs.find(params[:id])
-
     if @work_log.update_attribute(:end_at, Time.now.utc)
       respond_to do |format|
-        format.html { redirect_to @issue, notice: 'Work log was successfully stopped.' }
+        format.html { redirect_to @work_log.issue, notice: 'Work log was successfully stopped.' }
         format.json { render action: 'show', status: :created, location: @work_log }
       end
     end
