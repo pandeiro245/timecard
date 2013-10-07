@@ -17,6 +17,7 @@
   </div>
   <% if @project.admin?(current_user) %>
     <div style="position:absolute;top:0;right:0;">
+      <%= link_to "Add a member", project_members_path(@project), class: "btn btn-default" %>
       <%= link_to "Edit", edit_project_path(@project), class: "btn btn-default" %>
       <%= link_to "Archive", nil, class: "btn btn-default" %>
       <%= link_to "Destroy", @project, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>

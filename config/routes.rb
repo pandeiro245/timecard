@@ -1,4 +1,6 @@
 Timecard::Application.routes.draw do
+  resources :members, only: [:destroy]
+
   resources :work_logs, only: [:edit, :update, :destroy, :stop] do
     patch :stop, on: :member
   end
@@ -13,6 +15,7 @@ Timecard::Application.routes.draw do
 
   resources :projects do
     resources :issues, only: [:new, :create]
+    resources :members, only: [:index, :create]
   end
 
   delete "users/disconnect/:provider", to: "users#disconnect", as: :disconnect_provider
