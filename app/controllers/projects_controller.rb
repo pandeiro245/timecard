@@ -1,7 +1,8 @@
 class ProjectsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_project, only: [:show, :edit, :update, :destroy]
-  before_action :verify_project_members, only: [:show, :edit, :update, :destroy]
+  before_action :require_admin, only: [:edit, :update, :destroy]
+  before_action :require_member, only: [:show]
 
   # GET /projects
   # GET /projects.json
@@ -79,7 +80,12 @@ class ProjectsController < ApplicationController
       params.require(:project).permit(:name, :description, :is_public, :parent_id, :status)
     end
 
-    def verify_project_members
-      redirect_to root_path, alert: "You are not project member." unless @project.members.exists?(["user_id = ?", current_user.id])
+    def require_admin
+      redirect_to root_path, alert: "You are not project admin." unless @project.admin?(current_user)
+    end
+
+    def require_member
+      return if @project.is_public
+      redirect_to root_path, alert: "You are not project member." unless @project.member?(current_user)
     end
 end

@@ -10,4 +10,12 @@ class Project < ActiveRecord::Base
   has_many :issues, dependent: :destroy
 
   validates :name, presence: true
+
+  def admin?(user)
+    member?(user) ? members.find_by("user_id = ?", user.id).is_admin : false
+  end
+
+  def member?(user)
+    members.exists?(["user_id = ?", user.id])
+  end
 end
