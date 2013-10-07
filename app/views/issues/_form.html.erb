@@ -11,7 +11,7 @@
     </div>
   <% end %>
 
-  <%= f.hidden_field :author_id, value: current_user.id %>
+  <%= f.hidden_field :author_id, value: @issue.author ? @issue.author.id : current_user.id %>
   <div class="form-group">
     <%= f.label :subject %><br>
     <%= f.text_field :subject, class: "form-control" %>
