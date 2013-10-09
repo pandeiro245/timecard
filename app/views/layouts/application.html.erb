@@ -6,7 +6,7 @@
   <%= javascript_include_tag "application", "data-turbolinks-track" => true %>
   <%= csrf_meta_tags %>
 </head>
-<body class="<%= controller.controller_name %>" data-timer="<%= current_user.work_logs.running? ? current_user.work_logs.running.start_at.to_s(:rfc822) : '' %>">
+<body class="<%= controller.controller_name %>" data-timer="<%= timer %>">
 <nav class="navbar navbar-default" role="navigation">
   <div class="navbar-header">
      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
@@ -39,7 +39,7 @@
 <div class="container">
   <div class="row">
     <div class="col-lg-12 col-md-12">
-      <% if WorkLog.running? %>
+      <% if user_signed_in? && WorkLog.running? %>
         <div class="table-responsive">
           <table class="table table-bordered">
             <thead>
