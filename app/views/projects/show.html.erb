@@ -27,7 +27,9 @@
 <div class="section">
   <h3>
     Issue
-    <%= link_to "Add a issue", new_project_issue_path(@project), class: "btn btn-xs btn-default" %>
+    <% if @project.member?(current_user) %>
+      <%= link_to "Add a issue", new_project_issue_path(@project), class: "btn btn-xs btn-default" %>
+    <% end %>
   </h3>
   <div id="issues">
     <ul class="media-list">

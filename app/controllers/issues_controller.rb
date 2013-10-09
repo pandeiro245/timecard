@@ -2,6 +2,7 @@ class IssuesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_project, only: [:new, :create]
   before_action :set_issue, only: [:show, :edit, :update, :destroy, :close, :reopen]
+  before_action :require_member, except: [:show]
 
   # GET /issues/1
   # GET /issues/1.json
@@ -83,5 +84,10 @@ class IssuesController < ApplicationController
     # Never trust parameters from the scary internet, only allow the white list through.
     def issue_params
       params.require(:issue).permit(:subject, :description, :author_id, :assignee_id)
+    end
+
+    def require_member
+      project = @project ? @project : @issue.project
+      redirect_to root_path, alert: "You are not project member." unless project.member?(current_user)
     end
 end
