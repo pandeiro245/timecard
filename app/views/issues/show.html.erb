@@ -1,5 +1,5 @@
 <%= link_to "Back to project", @issue.project %>
-<div class="issue-heaeder" style="margin-top:20px;position:relative;">
+<div class="issue" style="margin-top:20px;position:relative;">
   <div class="issue-author">
     <%= @issue.author.email %> opened this issue <%= time_ago_in_words(@issue.created_at) %> ago
   </div>
