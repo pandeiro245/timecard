@@ -21,7 +21,7 @@
   <% if @issue.project.member?(current_user) %>
     <div style="position:absolute;top:0;right:0;">
       <% if current_user.work_logs.running? %>
-        <%= link_to "Stop", stop_work_log_path(current_user.work_logs.running), class: "btn btn-danger", method: :patch %>
+        <%= link_to "Stop", stop_work_log_path(current_user.work_logs.running), class: "btn btn-warning", method: :patch %>
       <% else %>
         <%= link_to "Start", start_issue_work_logs_path(issue_id: @issue), class: "btn btn-primary", method: :post %>
       <% end %>
