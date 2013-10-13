@@ -1,15 +1,22 @@
 class ProjectsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_project, only: [:show, :edit, :update, :destroy]
-  before_action :require_admin, only: [:edit, :update, :destroy]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :archive, :active]
+  before_action :require_admin, only: [:edit, :update, :destroy, :archive, :active]
   before_action :require_member, only: [:show]
 
   # GET /projects
   # GET /projects.json
   def index
-    active_projects = Project.active.public.where_values.reduce(:and)
-    my_projects = Project.where(id: Member.where(user_id: current_user.id).pluck(:project_id)).where_values.reduce(:and)
-    @projects = Project.where(active_projects.or(my_projects))
+    status = params[:status] || 1
+    case status.to_i
+    when Project::STATUS_ACTIVE
+      public_projects = Project.public.where_values.reduce(:and)
+      my_projects = Project.active.where(id: Member.where(user_id: current_user.id).pluck(:project_id)).where_values.reduce(:and)
+    when Project::STATUS_ARCHIVED
+      public_projects = Project.public.archive.where_values.reduce(:and)
+      my_projects = Project.archive.where(id: Member.where(user_id: current_user.id).pluck(:project_id)).where_values.reduce(:and)
+    end
+    @projects = Project.where(public_projects.or(my_projects))
   end
 
   # GET /projects/1
@@ -66,6 +73,30 @@ class ProjectsController < ApplicationController
     respond_to do |format|
       format.html { redirect_to projects_url }
       format.json { head :no_content }
+    end
+  end
+
+  def archive
+    respond_to do |format|
+      if @project.update(status: Project::STATUS_ARCHIVED)
+        format.html { redirect_to @project, notice: 'Project was successfully updated.' }
+        format.json { head :no_content }
+      else
+        format.html { render action: 'show' }
+        format.json { render json: @project.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  def active
+    respond_to do |format|
+      if @project.update(status: Project::STATUS_ACTIVE)
+        format.html { redirect_to @project, notice: 'Project was successfully updated.' }
+        format.json { head :no_content }
+      else
+        format.html { render action: 'show' }
+        format.json { render json: @project.errors, status: :unprocessable_entity }
+      end
     end
   end
 

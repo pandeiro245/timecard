@@ -19,7 +19,11 @@
     <div style="position:absolute;top:0;right:0;">
       <%= link_to "Add a member", project_members_path(@project), class: "btn btn-default" %>
       <%= link_to "Edit", edit_project_path(@project), class: "btn btn-default" %>
-      <%= link_to "Archive", nil, class: "btn btn-default" %>
+      <% if @project.status == Project::STATUS_ACTIVE %>
+        <%= link_to "Archive", archive_project_path(@project), class: "btn btn-default", method: :patch %>
+      <% elsif @project.status == Project::STATUS_ARCHIVED %>
+        <%= link_to "Active", active_project_path(@project), class: "btn btn-default", method: :patch %>
+      <% end %>
       <%= link_to "Destroy", @project, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
     </div>
   <% end %>
