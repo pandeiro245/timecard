@@ -53,7 +53,7 @@
     <ul class="media-list">
       <% WorkLog.where(issue_id: @project.issues.pluck(:id)).complete.order("updated_at DESC").each do |work_log| %>
         <li class="media">
-          <%= work_log.user.email %><br />
+          <%= work_log.user.username %><br />
           WorkTime <%= formatted_time_distance(work_log.start_at, work_log.end_at) %><br />
           Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
         </li>

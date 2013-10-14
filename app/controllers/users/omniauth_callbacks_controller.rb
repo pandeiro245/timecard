@@ -17,6 +17,7 @@ class Users::OmniauthCallbacksController < Devise::OmniauthCallbacksController
     else
       # Sign in with Github
       user = User.where(email: omniauth.info.email).first_or_initialize
+      user.username =  omniauth.info.nickname if user.username.blank?
       user.apply_omniauth_with_github(omniauth)
       if user.save
         flash[:notice] = "Signed in successfully."

@@ -9,6 +9,9 @@ class User < ActiveRecord::Base
   has_many :members, dependent: :destroy
   has_many :work_logs
 
+  validates :username, presence: true
+  validates :username, uniqueness: true
+
   def apply_omniauth_with_github(omniauth)
     self.email = omniauth.info.email if self.email.blank?
     self.password = Devise.friendly_token[0,20] if self.encrypted_password.blank?

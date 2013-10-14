@@ -1,7 +1,7 @@
 <%= link_to "Back to project", @issue.project %>
 <div class="issue" style="margin-top:20px;position:relative;">
   <div class="issue-author">
-    <%= @issue.author.email %> opened this issue <%= time_ago_in_words(@issue.created_at) %> ago
+    <%= @issue.author.username %> opened this issue <%= time_ago_in_words(@issue.created_at) %> ago
   </div>
   <div class="issue-subject">
     <h2 style="margin:0">
@@ -40,7 +40,7 @@
     <% @issue.work_logs.complete.order("updated_at DESC").each do |work_log| %>
       <li class="media">
         <div style="position:relative;">
-          <%= work_log.user.email %><br />
+          <%= work_log.user.username %><br />
           WorkTime <%= formatted_time_distance(work_log.start_at, work_log.end_at) %><br />
           Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
           <div style="position:absolute;top:0;right:0;">

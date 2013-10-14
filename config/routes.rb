@@ -21,7 +21,7 @@ Timecard::Application.routes.draw do
   end
 
   delete "users/disconnect/:provider", to: "users#disconnect", as: :disconnect_provider
-  devise_for :users, controllers:  { omniauth_callbacks: "users/omniauth_callbacks" }
+  devise_for :users, controllers:  { omniauth_callbacks: "users/omniauth_callbacks", registrations: 'users/registrations' }
   root :to => "home#index"
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".
