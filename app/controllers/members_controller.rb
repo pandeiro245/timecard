@@ -20,6 +20,7 @@ class MembersController < ApplicationController
 
   def destroy
     @member.destroy
+    @member.project.issues.where(assignee_id: @member.user_id).update_all(assignee_id: nil)
     respond_to do |format|
       format.html { redirect_to project_members_path(@member.project) }
       format.json { head :no_content }

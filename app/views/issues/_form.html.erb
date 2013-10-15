@@ -20,6 +20,10 @@
     <%= f.label :description %><br>
     <%= f.text_area :description, class: "form-control" %>
   </div>
+  <div class="form-group">
+    <%= f.label :assignee_id %><br>
+    <%= f.select :assignee_id, Member.where(project_id: @project.id).collect { |m| [ m.user.username, m.user.id ] }, class: "form-control" %>
+  </div>
   <div class="actions">
     <%= f.submit class: "btn btn-default" %>
   </div>

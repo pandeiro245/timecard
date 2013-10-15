@@ -8,6 +8,13 @@
       <%= @issue.subject %>
     </h2>
   </div>
+  <div class="issue-assignee">
+    <% if @issue.assignee.present? %>
+      <%= @issue.assignee.username %> is assigned
+    <% else %>
+        No one is assigned
+    <% end %>
+  </div>
   <div class="issue-description">
     <%= simple_format(@issue.description) %>
   </div>
