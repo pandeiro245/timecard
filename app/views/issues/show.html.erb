@@ -1,5 +1,5 @@
 <%= link_to "Back to project", @issue.project %>
-<div class="issue" style="margin-top:20px;position:relative;">
+<div class="issue">
   <div class="issue-author">
     <%= @issue.author.username %> opened this issue <%= time_ago_in_words(@issue.created_at) %> ago
   </div>
@@ -26,7 +26,7 @@
     <% end %>
   </div>
   <% if @issue.project.member?(current_user) && @issue.project.status == Project::STATUS_ACTIVE %>
-    <div style="position:absolute;top:0;right:0;">
+    <div class="issue-actions">
       <% if current_user.work_logs.running? %>
         <%= link_to "Stop", stop_work_log_path(current_user.work_logs.running), class: "btn btn-warning", method: :patch %>
       <% else %>
@@ -46,12 +46,12 @@
   <ul class="media-list">
     <% @issue.work_logs.complete.order("updated_at DESC").each do |work_log| %>
       <li class="media">
-        <div style="position:relative;">
+        <div class="work-log">
           <%= work_log.user.username %><br />
           WorkTime <%= formatted_time_distance(work_log.start_at, work_log.end_at) %><br />
           Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
           <% if @issue.project.status == Project::STATUS_ACTIVE %>
-            <div style="position:absolute;top:0;right:0;">
+            <div class="work-log-actions">
               <%= link_to "Edit", edit_work_log_path(work_log), class: "btn btn-default" %>
               <%= link_to "Destroy", work_log, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
             </div>

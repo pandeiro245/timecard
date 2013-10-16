@@ -1,5 +1,5 @@
 <%= link_to "Back to all projects", projects_path %>
-<div class="project-header" style="position:relative;">
+<div class="project-header">
   <div class="project-name">
     <h2>
       <%= @project.name %>
@@ -16,7 +16,7 @@
     <% end %>
   </div>
   <% if @project.admin?(current_user) %>
-    <div style="position:absolute;top:0;right:0;">
+    <div class="project-actions">
       <% if @project.status == Project::STATUS_ACTIVE %>
         <%= link_to "Add a member", project_members_path(@project), class: "btn btn-default" %>
         <%= link_to "Edit", edit_project_path(@project), class: "btn btn-default" %>
@@ -40,7 +40,7 @@
   <div id="issues">
     <div class="media-list">
       <% @project.issues.each do |issue| %>
-        <div class="media issue" style="margin-top:20px;position:relative;">
+        <div class="media issue">
           <div class="issue-subject">
             <b style="margin:0">
               <%= link_to issue.subject, issue %>
