@@ -4,6 +4,7 @@ class Project < ActiveRecord::Base
   STATUS_ARCHIVED = 9
 
   scope :active, -> { where(status: STATUS_ACTIVE) }
+  scope :closed, -> { where(status: STATUS_CLOSED) }
   scope :archive, -> { where(status: STATUS_ARCHIVED) }
   scope :public, -> { where(is_public: true) }
 

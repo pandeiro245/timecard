@@ -25,7 +25,7 @@
       <span class="label label-danger">Close</span>
     <% end %>
   </div>
-  <% if @issue.project.member?(current_user) %>
+  <% if @issue.project.member?(current_user) && @issue.project.status == Project::STATUS_ACTIVE %>
     <div style="position:absolute;top:0;right:0;">
       <% if current_user.work_logs.running? %>
         <%= link_to "Stop", stop_work_log_path(current_user.work_logs.running), class: "btn btn-warning", method: :patch %>
@@ -50,10 +50,12 @@
           <%= work_log.user.username %><br />
           WorkTime <%= formatted_time_distance(work_log.start_at, work_log.end_at) %><br />
           Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
-          <div style="position:absolute;top:0;right:0;">
-            <%= link_to "Edit", edit_work_log_path(work_log), class: "btn btn-default" %>
-            <%= link_to "Destroy", work_log, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
-          </div>
+          <% if @issue.project.status == Project::STATUS_ACTIVE %>
+            <div style="position:absolute;top:0;right:0;">
+              <%= link_to "Edit", edit_work_log_path(work_log), class: "btn btn-default" %>
+              <%= link_to "Destroy", work_log, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
+            </div>
+          <% end %>
         </div>
       </li>
     <% end %>

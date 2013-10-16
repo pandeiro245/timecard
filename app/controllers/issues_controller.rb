@@ -2,6 +2,7 @@ class IssuesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_project, only: [:new, :create]
   before_action :set_issue, only: [:show, :edit, :update, :destroy, :close, :reopen]
+  before_action :reject_archived
   before_action :require_member, except: [:show]
 
   # GET /issues/1
@@ -89,5 +90,9 @@ class IssuesController < ApplicationController
     def require_member
       project = @project ? @project : @issue.project
       redirect_to root_path, alert: "You are not project member." unless project.member?(current_user)
+    end
+
+    def reject_archived
+      redirect_to root_path, alert: "You need to sign in or sign up before continuing." if @issue.project.status == Project::STATUS_ARCHIVED
     end
 end
