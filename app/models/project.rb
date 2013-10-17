@@ -18,6 +18,6 @@ class Project < ActiveRecord::Base
   end
 
   def member?(user)
-    members.exists?(["user_id = ?", user.id])
+    members.exists?(["user_id = ?", user.id]) ? true : false
   end
 end
