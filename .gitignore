@@ -15,3 +15,4 @@ config/database.yml
 /tmp
 Gemfile.lock
 config/omniauth.yml
+/coverage

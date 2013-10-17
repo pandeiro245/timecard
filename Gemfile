@@ -52,6 +52,10 @@ group :development do
   gem 'guard-rspec'
 end
 
+group :test do
+  gem 'simplecov', :require => false
+end
+
 group :development, :test do
   gem 'rspec-rails'
   gem 'factory_girl_rails'
