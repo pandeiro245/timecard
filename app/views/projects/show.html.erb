@@ -39,7 +39,7 @@
   </h3>
   <div id="issues">
     <div class="media-list">
-      <% @project.issues.each do |issue| %>
+      <% @project.issues.order("updated_at DESC").each do |issue| %>
         <div class="media issue">
           <div class="issue-subject">
             <b style="margin:0">
@@ -59,6 +59,27 @@
         </div>
       <% end %>
     </div> 
+  </div>
+</div>
+<div class="section">
+  <h3>
+    Comments
+  </h3>
+  <div id="comments">
+    <ul class="media-list">
+      <% Comment.where(issue_id: @project.issues.pluck(:id)).order("updated_at DESC").each do |comment| %>
+        <li class="media">
+          <div class="comment">
+            <div class="comment-author">
+              <%= comment.user.username %> commented <%= time_ago_in_words(comment.created_at) %> ago
+            </div>
+            <div class="comment-body">
+              <%= simple_format(comment.body) %>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
   </div>
 </div>
 <div class="section">
