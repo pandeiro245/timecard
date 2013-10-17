@@ -14,6 +14,7 @@
     <% else %>
         No one is assigned
     <% end %>
+    will start at <%= @issue.will_start_at || "today" %>
   </div>
   <div class="issue-status">
     <% if @issue.status == 1 %>
@@ -31,6 +32,11 @@
         <%= link_to "Stop", stop_work_log_path(current_user.work_logs.running), class: "btn btn-warning", method: :patch %>
       <% else %>
         <%= link_to "Start", start_issue_work_logs_path(issue_id: @issue), class: "btn btn-primary", method: :post %>
+      <% end %>
+      <% if @issue.will_start_at.present? && @issue.will_start_at >= Time.now.utc %>
+        <%= link_to "Do today", do_today_issue_path(issue_id: @issue), class: "btn btn-default", method: :patch %>
+      <% else %>
+        <%= link_to "Don't do today", postpone_issue_path(issue_id: @issue), class: "btn btn-default", method: :patch %>
       <% end %>
       <%= link_to "Edit", edit_issue_path(@issue), class: "btn btn-default" %>
       <% if @issue.status == 1 %>

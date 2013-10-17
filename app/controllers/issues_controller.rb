@@ -1,7 +1,7 @@
 class IssuesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_project, only: [:new, :create]
-  before_action :set_issue, only: [:show, :edit, :update, :destroy, :close, :reopen]
+  before_action :set_issue, only: [:show, :edit, :update, :destroy, :close, :reopen, :postpone, :do_today]
   before_action :reject_archived
   before_action :require_member, except: [:show]
 
@@ -65,6 +65,28 @@ class IssuesController < ApplicationController
   # PATCH/PUT projects/1/issues/1/reopen.json
   def reopen
     if @issue.update_attribute(:status, 1)
+      respond_to do |format|
+        format.html { redirect_to @issue, notice: 'Issue was successfully updated.' }
+        format.json { head :no_content }
+      end
+    end
+  end
+
+  # PATCH/PUT projects/1/issues/1/postpone
+  # PATCH/PUT projects/1/issues/1/postpone.json
+  def postpone
+    if @issue.update(will_start_at: 1.day.since(Time.now.utc))
+      respond_to do |format|
+        format.html { redirect_to @issue, notice: 'Issue was successfully updated.' }
+        format.json { head :no_content }
+      end
+    end
+  end
+
+  # PATCH/PUT projects/1/issues/1/do_today
+  # PATCH/PUT projects/1/issues/1/do_today.json
+  def do_today
+    if @issue.update(will_start_at: Time.now.utc)
       respond_to do |format|
         format.html { redirect_to @issue, notice: 'Issue was successfully updated.' }
         format.json { head :no_content }

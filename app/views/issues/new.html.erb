@@ -24,7 +24,11 @@
   </div>
   <div class="form-group">
     <%= f.label :assignee_id %><br>
-    <%= f.select :assignee_id, Member.where(project_id: @project.id).collect { |m| [ m.user.username, m.user.id ] }, class: "form-control" %>
+    <%= f.select :assignee_id, Member.where(project_id: @project.id).collect { |m| [ m.user.username, m.user.id ] }, { include_blank: true }, class: "form-control" %>
+  </div>
+  <div class="form-group">
+    <%= f.label :will_start_at %><br>
+    <%= f.datetime_select :will_start_at, class: "form-control" %>
   </div>
   <div class="actions">
     <%= f.submit class: "btn btn-default" %>

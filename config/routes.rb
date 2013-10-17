@@ -9,6 +9,8 @@ Timecard::Application.routes.draw do
   resources :issues, only: [:show, :edit, :update, :close, :reopen] do
     patch :close, on: :member
     patch :reopen, on: :member
+    patch :postpone, on: :member
+    patch :do_today, on: :member
     resources :comments, only: [:create]
     resource :work_logs, only: [:start] do
       post :start, on: :member
