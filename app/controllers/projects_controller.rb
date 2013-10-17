@@ -1,7 +1,7 @@
 class ProjectsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_project, only: [:show, :edit, :update, :destroy, :archive, :active, :close]
-  before_action :reject_archived, except: [:index, :active]
+  before_action :reject_archived, except: [:index, :new, :create, :active]
   before_action :require_admin, only: [:edit, :update, :destroy, :archive, :active, :close]
   before_action :require_member, only: [:show]
 
