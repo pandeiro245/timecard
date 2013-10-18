@@ -1,3 +1,28 @@
-// Place all the styles related to the issues controller here.
-// They will automatically be included in application.css.
-// You can use Sass (SCSS) here: http://sass-lang.com/
+.issues {
+  .issue {
+    margin-top: 20px;
+    margin-bottom: 15px;
+    position:relative;
+  }
+  .issue-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  .comment {
+    position: relative;
+  }
+  .comment-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  .work-log {
+    position: relative;
+  }
+  .work-log-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+}

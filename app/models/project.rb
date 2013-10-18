@@ -4,6 +4,7 @@ class Project < ActiveRecord::Base
   STATUS_ARCHIVED = 9
 
   scope :active, -> { where(status: STATUS_ACTIVE) }
+  scope :closed, -> { where(status: STATUS_CLOSED) }
   scope :archive, -> { where(status: STATUS_ARCHIVED) }
   scope :public, -> { where(is_public: true) }
 
@@ -17,6 +18,6 @@ class Project < ActiveRecord::Base
   end
 
   def member?(user)
-    members.exists?(["user_id = ?", user.id])
+    members.exists?(["user_id = ?", user.id]) ? true : false
   end
 end

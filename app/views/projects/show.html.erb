@@ -1,5 +1,5 @@
 <%= link_to "Back to all projects", projects_path %>
-<div class="project-header" style="position:relative;">
+<div class="project-header">
   <div class="project-name">
     <h2>
       <%= @project.name %>
@@ -16,29 +16,31 @@
     <% end %>
   </div>
   <% if @project.admin?(current_user) %>
-    <div style="position:absolute;top:0;right:0;">
-      <%= link_to "Add a member", project_members_path(@project), class: "btn btn-default" %>
-      <%= link_to "Edit", edit_project_path(@project), class: "btn btn-default" %>
+    <div class="project-actions">
       <% if @project.status == Project::STATUS_ACTIVE %>
+        <%= link_to "Add a member", project_members_path(@project), class: "btn btn-default" %>
+        <%= link_to "Edit", edit_project_path(@project), class: "btn btn-default" %>
+        <%= link_to "Close", close_project_path(@project), class: "btn btn-default", method: :patch %>
         <%= link_to "Archive", archive_project_path(@project), class: "btn btn-default", method: :patch %>
-      <% elsif @project.status == Project::STATUS_ARCHIVED %>
+      <% else %>
         <%= link_to "Active", active_project_path(@project), class: "btn btn-default", method: :patch %>
       <% end %>
-      <%= link_to "Destroy", @project, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
     </div>
   <% end %>
 </div>
 <div class="section">
   <h3>
     Issue
-    <% if @project.member?(current_user) %>
-      <%= link_to "Add a issue", new_project_issue_path(@project), class: "btn btn-xs btn-default" %>
+    <% if @project.status == Project::STATUS_ACTIVE %>
+      <% if @project.member?(current_user) %>
+        <%= link_to "Add a issue", new_project_issue_path(@project), class: "btn btn-xs btn-default" %>
+      <% end %>
     <% end %>
   </h3>
   <div id="issues">
     <div class="media-list">
-      <% @project.issues.each do |issue| %>
-        <div class="media issue" style="margin-top:20px;position:relative;">
+      <% @project.issues.order("updated_at DESC").each do |issue| %>
+        <div class="media issue">
           <div class="issue-subject">
             <b style="margin:0">
               <%= link_to issue.subject, issue %>
@@ -57,6 +59,27 @@
         </div>
       <% end %>
     </div> 
+  </div>
+</div>
+<div class="section">
+  <h3>
+    Comments
+  </h3>
+  <div id="comments">
+    <ul class="media-list">
+      <% Comment.where(issue_id: @project.issues.pluck(:id)).order("updated_at DESC").each do |comment| %>
+        <li class="media">
+          <div class="comment">
+            <div class="comment-author">
+              <%= comment.user.username %> commented <%= time_ago_in_words(comment.created_at) %> ago
+            </div>
+            <div class="comment-body">
+              <%= simple_format(comment.body) %>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
   </div>
 </div>
 <div class="section">

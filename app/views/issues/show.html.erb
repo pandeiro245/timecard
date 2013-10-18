@@ -1,7 +1,7 @@
 <%= link_to "Back to project", @issue.project %>
-<div class="issue" style="margin-top:20px;position:relative;">
-  <div class="issue-author">
-    <%= @issue.author.username %> opened this issue <%= time_ago_in_words(@issue.created_at) %> ago
+<div class="issue">
+  <div class="issue-author text-muted">
+    <b><%= @issue.author.username %></b> opened this issue <%= time_ago_in_words(@issue.created_at) %> ago
   </div>
   <div class="issue-subject">
     <h2 style="margin:0">
@@ -10,13 +10,11 @@
   </div>
   <div class="issue-assignee">
     <% if @issue.assignee.present? %>
-      <%= @issue.assignee.username %> is assigned
+      <b><%= @issue.assignee.username %></b> is assigned
     <% else %>
         No one is assigned
     <% end %>
-  </div>
-  <div class="issue-description">
-    <%= simple_format(@issue.description) %>
+    will start at <%= @issue.will_start_at || "today" %>
   </div>
   <div class="issue-status">
     <% if @issue.status == 1 %>
@@ -25,12 +23,20 @@
       <span class="label label-danger">Close</span>
     <% end %>
   </div>
-  <% if @issue.project.member?(current_user) %>
-    <div style="position:absolute;top:0;right:0;">
+  <div class="issue-description">
+    <%= @issue.description.present? ? simple_format(@issue.description) : "No description given." %>
+  </div>
+  <% if @issue.project.member?(current_user) && @issue.project.status == Project::STATUS_ACTIVE %>
+    <div class="issue-actions">
       <% if current_user.work_logs.running? %>
         <%= link_to "Stop", stop_work_log_path(current_user.work_logs.running), class: "btn btn-warning", method: :patch %>
       <% else %>
         <%= link_to "Start", start_issue_work_logs_path(issue_id: @issue), class: "btn btn-primary", method: :post %>
+      <% end %>
+      <% if @issue.will_start_at.present? && @issue.will_start_at >= Time.now.utc %>
+        <%= link_to "Do today", do_today_issue_path(issue_id: @issue), class: "btn btn-default", method: :patch %>
+      <% else %>
+        <%= link_to "Don't do today", postpone_issue_path(issue_id: @issue), class: "btn btn-default", method: :patch %>
       <% end %>
       <%= link_to "Edit", edit_issue_path(@issue), class: "btn btn-default" %>
       <% if @issue.status == 1 %>
@@ -41,19 +47,63 @@
     </div>
   <% end %>
 </div>
+<% if @issue.project.member?(current_user) && @issue.project.status == Project::STATUS_ACTIVE %>
+  <%= form_for [@issue, Comment.new] do |f| %>
+    <div class="form-group">
+      <%= f.text_area :body, class: "form-control", placeholder: "Leave a comment" %>
+    </div>
+    <div class="actions">
+      <%= f.submit "Comment", class: "btn btn-default" %>
+    </div>
+  <% end %>
+<% end %>
+<div class="section">
+  <h3>Comments</h3>
+  <ul class="media-list">
+    <% @issue.comments.order("updated_at DESC").each do |comment| %>
+      <li class="media comment-area">
+        <div class="comment">
+          <div class="comment-author">
+            <%= comment.user.username %> commented <%= time_ago_in_words(comment.created_at) %> ago
+          </div>
+          <div class="comment-body">
+            <%= simple_format(comment.body) %>
+          </div>
+          <% if @issue.project.member?(current_user) && @issue.project.status == Project::STATUS_ACTIVE %>
+            <div class="comment-actions">
+              <%= link_to "Edit", "#", class: "btn btn-default js-edit-comment-button", "data-no-turbolink" => "1" %>
+              <%= link_to "Destroy", comment, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
+            </div>
+          <% end %>
+        </div>
+        <%= form_for comment, html: { style: "display:none;" } do |f| %>
+          <div class="form-group">
+            <%= f.text_area :body, class: "form-control" %>
+          </div>
+          <div class="actions">
+            <%= f.submit class: "btn btn-default" %>
+            <%= link_to "Cancel", "#", class: "js-cancel-edit-comment-button", "data-no-turbolink" => "1" %>
+          </div>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</div>
 <div class="section">
   <h3>WorkLogs</h3>
   <ul class="media-list">
     <% @issue.work_logs.complete.order("updated_at DESC").each do |work_log| %>
       <li class="media">
-        <div style="position:relative;">
+        <div class="work-log">
           <%= work_log.user.username %><br />
           WorkTime <%= formatted_time_distance(work_log.start_at, work_log.end_at) %><br />
           Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
-          <div style="position:absolute;top:0;right:0;">
-            <%= link_to "Edit", edit_work_log_path(work_log), class: "btn btn-default" %>
-            <%= link_to "Destroy", work_log, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
-          </div>
+          <% if @issue.project.status == Project::STATUS_ACTIVE %>
+            <div class="work-log-actions">
+              <%= link_to "Edit", edit_work_log_path(work_log), class: "btn btn-default" %>
+              <%= link_to "Destroy", work_log, class: "btn btn-danger", confirm: "Are you sure?", method: :delete %>
+            </div>
+          <% end %>
         </div>
       </li>
     <% end %>

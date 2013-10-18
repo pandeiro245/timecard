@@ -1,7 +1,8 @@
 class ProjectsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_project, only: [:show, :edit, :update, :destroy, :archive, :active]
-  before_action :require_admin, only: [:edit, :update, :destroy, :archive, :active]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :archive, :active, :close]
+  before_action :reject_archived, except: [:index, :new, :create, :active]
+  before_action :require_admin, only: [:edit, :update, :destroy, :archive, :active, :close]
   before_action :require_member, only: [:show]
 
   # GET /projects
@@ -10,8 +11,11 @@ class ProjectsController < ApplicationController
     status = params[:status] || 1
     case status.to_i
     when Project::STATUS_ACTIVE
-      public_projects = Project.public.where_values.reduce(:and)
+      public_projects = Project.public.active.where_values.reduce(:and)
       my_projects = Project.active.where(id: Member.where(user_id: current_user.id).pluck(:project_id)).where_values.reduce(:and)
+    when Project::STATUS_CLOSED
+      public_projects = Project.public.closed.where_values.reduce(:and)
+      my_projects = Project.closed.where(id: Member.where(user_id: current_user.id).pluck(:project_id)).where_values.reduce(:and)
     when Project::STATUS_ARCHIVED
       public_projects = Project.public.archive.where_values.reduce(:and)
       my_projects = Project.archive.where(id: Member.where(user_id: current_user.id).pluck(:project_id)).where_values.reduce(:and)
@@ -66,20 +70,10 @@ class ProjectsController < ApplicationController
     end
   end
 
-  # DELETE /projects/1
-  # DELETE /projects/1.json
-  def destroy
-    @project.destroy
-    respond_to do |format|
-      format.html { redirect_to projects_url }
-      format.json { head :no_content }
-    end
-  end
-
   def archive
     respond_to do |format|
       if @project.update(status: Project::STATUS_ARCHIVED)
-        format.html { redirect_to @project, notice: 'Project was successfully updated.' }
+        format.html { redirect_to projects_path, notice: 'Project was successfully updated.' }
         format.json { head :no_content }
       else
         format.html { render action: 'show' }
@@ -91,6 +85,18 @@ class ProjectsController < ApplicationController
   def active
     respond_to do |format|
       if @project.update(status: Project::STATUS_ACTIVE)
+        format.html { redirect_to @project, notice: 'Project was successfully updated.' }
+        format.json { head :no_content }
+      else
+        format.html { render action: 'show' }
+        format.json { render json: @project.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  def close
+    respond_to do |format|
+      if @project.update(status: Project::STATUS_CLOSED)
         format.html { redirect_to @project, notice: 'Project was successfully updated.' }
         format.json { head :no_content }
       else
@@ -118,5 +124,9 @@ class ProjectsController < ApplicationController
     def require_member
       return if @project.is_public
       redirect_to root_path, alert: "You are not project member." unless @project.member?(current_user)
+    end
+
+    def reject_archived
+      redirect_to root_path, alert: "You need to sign in or sign up before continuing." if @project.status == Project::STATUS_ARCHIVED
     end
 end

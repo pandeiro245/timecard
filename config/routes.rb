@@ -1,6 +1,7 @@
 Timecard::Application.routes.draw do
   resources :members, only: [:destroy]
 
+  resources :comments, only: [:edit, :update, :destroy]
   resources :work_logs, only: [:edit, :update, :destroy, :stop] do
     patch :stop, on: :member
   end
@@ -8,6 +9,9 @@ Timecard::Application.routes.draw do
   resources :issues, only: [:show, :edit, :update, :close, :reopen] do
     patch :close, on: :member
     patch :reopen, on: :member
+    patch :postpone, on: :member
+    patch :do_today, on: :member
+    resources :comments, only: [:create]
     resource :work_logs, only: [:start] do
       post :start, on: :member
     end
@@ -16,6 +20,7 @@ Timecard::Application.routes.draw do
   resources :projects do
     patch :archive, on: :member
     patch :active, on: :member
+    patch :close, on: :member
     resources :issues, only: [:new, :create]
     resources :members, only: [:index, :create]
   end

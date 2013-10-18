@@ -1,7 +1,8 @@
 class IssuesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_project, only: [:new, :create]
-  before_action :set_issue, only: [:show, :edit, :update, :destroy, :close, :reopen]
+  before_action :set_issue, only: [:show, :edit, :update, :destroy, :close, :reopen, :postpone, :do_today]
+  before_action :reject_archived
   before_action :require_member, except: [:show]
 
   # GET /issues/1
@@ -71,6 +72,28 @@ class IssuesController < ApplicationController
     end
   end
 
+  # PATCH/PUT projects/1/issues/1/postpone
+  # PATCH/PUT projects/1/issues/1/postpone.json
+  def postpone
+    if @issue.update(will_start_at: 1.day.since(Time.now.utc))
+      respond_to do |format|
+        format.html { redirect_to @issue, notice: 'Issue was successfully updated.' }
+        format.json { head :no_content }
+      end
+    end
+  end
+
+  # PATCH/PUT projects/1/issues/1/do_today
+  # PATCH/PUT projects/1/issues/1/do_today.json
+  def do_today
+    if @issue.update(will_start_at: Time.now.utc)
+      respond_to do |format|
+        format.html { redirect_to @issue, notice: 'Issue was successfully updated.' }
+        format.json { head :no_content }
+      end
+    end
+  end
+
   private
     def set_project
       @project = Project.find(params[:project_id])
@@ -89,5 +112,10 @@ class IssuesController < ApplicationController
     def require_member
       project = @project ? @project : @issue.project
       redirect_to root_path, alert: "You are not project member." unless project.member?(current_user)
+    end
+
+    def reject_archived
+      project = @project ? @project : @issue.project
+      redirect_to root_path, alert: "You need to sign in or sign up before continuing." if project.status == Project::STATUS_ARCHIVED
     end
 end
