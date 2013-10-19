@@ -27,6 +27,9 @@ class ProjectsController < ApplicationController
   # GET /projects/1.json
   def show
     @title = @project.name
+    @issues = @project.issues.order("updated_at DESC").limit(10)
+    @comments = Comment.where(issue_id: @project.issues.pluck(:id)).order("updated_at DESC").limit(10)
+    @work_logs = WorkLog.where(issue_id: @project.issues.pluck(:id)).complete.order("updated_at DESC").limit(10)
   end
 
   # GET /projects/new

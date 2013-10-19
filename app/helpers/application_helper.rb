@@ -12,7 +12,7 @@ module ApplicationHelper
     text = h(text)
     text = text.gsub(/https?:\/\/.*$/){|text|
       text = text.gsub("\r", "")
-      tr = truncate(text, length:35)
+      tr = truncate(text, length:50)
       link_to tr, text, {target: "_blank"}
     }
     simple_format(text, {}, sanitize: false)

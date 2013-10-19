@@ -28,7 +28,9 @@
     </div>
   <% end %>
 </div>
-<div class="section">
+
+<div class="row">
+<div class="col-lg-4">
   <h3>
     Issue
     <% if @project.status == Project::STATUS_ACTIVE %>
@@ -39,7 +41,7 @@
   </h3>
   <div id="issues">
     <div class="media-list">
-      <% @project.issues.order("updated_at DESC").each do |issue| %>
+      <% @issues.each do |issue| %>
         <div class="media issue">
           <div class="issue-subject">
             <b style="margin:0">
@@ -61,17 +63,17 @@
     </div> 
   </div>
 </div>
-<div class="section">
+<div class="col-lg-4">
   <h3>
     Comments
   </h3>
   <div id="comments">
     <ul class="media-list">
-      <% Comment.where(issue_id: @project.issues.pluck(:id)).order("updated_at DESC").each do |comment| %>
+      <% @comments.each do |comment| %>
         <li class="media">
           <div class="comment">
             <div class="comment-author">
-              <%= comment.user.username %> commented <%= time_ago_in_words(comment.created_at) %> ago
+              <%= comment.user.username %> @ <%= time_ago_in_words(comment.created_at) %> ago
             </div>
             <div class="comment-body">
               <%= simple_format(comment.body) %>
@@ -82,17 +84,18 @@
     </ul>
   </div>
 </div>
-<div class="section">
+<div class="col-lg-4">
   <h3>
     WorkLogs
   </h3>
   <div id="work-logs">
     <ul class="media-list">
-      <% WorkLog.where(issue_id: @project.issues.pluck(:id)).complete.order("updated_at DESC").each do |work_log| %>
+      <% @work_logs.each do |work_log| %>
         <li class="media">
           <%= work_log.user.username %><br />
-          WorkTime <%= formatted_time_distance(work_log.start_at, work_log.end_at) %><br />
-          Start At: <%= work_log.start_at %> / End At: <%= work_log.end_at %>
+           
+          <%= time_ago_in_words(work_log.start_at) %> - <%= time_ago_in_words(work_log.end_at) %>
+          (<%= formatted_time_distance(work_log.start_at, work_log.end_at) %>)
         </li>
       <% end %>
     </ul>
