@@ -17,7 +17,7 @@
           <% end %>
         </div>
         <div>
-          <p><%= project.description.truncate(50) %></p>
+          <p><%= project.description.truncate(50) if project.description %></p>
         </div>
         <div id="members">
           <% project.members.each do |member| %>

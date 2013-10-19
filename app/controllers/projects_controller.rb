@@ -5,8 +5,6 @@ class ProjectsController < ApplicationController
   before_action :require_admin, only: [:edit, :update, :destroy, :archive, :active, :close]
   before_action :require_member, only: [:show]
 
-  # GET /projects
-  # GET /projects.json
   def index
     status = params[:status] || 1
     case status.to_i
@@ -23,8 +21,6 @@ class ProjectsController < ApplicationController
     @projects = Project.where(public_projects.or(my_projects))
   end
 
-  # GET /projects/1
-  # GET /projects/1.json
   def show
     @title = @project.name
     @issues = @project.issues.order("updated_at DESC").limit(10).where(status: 1)
@@ -32,20 +28,15 @@ class ProjectsController < ApplicationController
     @work_logs = WorkLog.where(issue_id: @project.issues.pluck(:id)).complete.order("updated_at DESC").limit(10)
   end
 
-  # GET /projects/new
   def new
     @project = Project.new
   end
 
-  # GET /projects/1/edit
   def edit
   end
 
-  # POST /projects
-  # POST /projects.json
   def create
     @project = Project.new(project_params)
-
     respond_to do |format|
       if @project.save
         m = Member.new(user: current_user, is_admin: true)
@@ -59,8 +50,6 @@ class ProjectsController < ApplicationController
     end
   end
 
-  # PATCH/PUT /projects/1
-  # PATCH/PUT /projects/1.json
   def update
     respond_to do |format|
       if @project.update(project_params)
