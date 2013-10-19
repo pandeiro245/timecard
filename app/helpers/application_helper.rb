@@ -10,9 +10,10 @@ module ApplicationHelper
 
   def hbr(text)
     text = h(text)
-    text = text.gsub(/https?:\/\/.*/){|text|
+    text = text.gsub(/https?:\/\/.*$/){|text|
+      text = text.gsub("\r", "")
       tr = truncate(text, length:35)
-      "<a href=\"#{text}\" target=\"_blank\">#{tr}</a><br />"
+      link_to tr, text, {target: "_blank"}
     }
     simple_format(text, {}, sanitize: false)
   end
