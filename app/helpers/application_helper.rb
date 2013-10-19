@@ -7,4 +7,14 @@ module ApplicationHelper
     sec = sec - (min * 60)
     "#{sprintf('%02d', hour)} hour #{sprintf('%02d', min)} min #{sprintf('%02d', sec)} sec"
   end
+
+  def hbr(text)
+    text = h(text)
+    text = text.gsub(/https?:\/\/.*/){|text|
+      tr = truncate(text, length:35)
+      "<a href=\"#{text}\" target=\"_blank\">#{tr}</a><br />"
+    }
+    simple_format(text, {}, sanitize: false)
+  end
+
 end
